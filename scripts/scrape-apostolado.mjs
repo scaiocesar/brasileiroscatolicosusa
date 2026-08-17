@@ -143,10 +143,34 @@ function csvEscape(value) {
 }
 
 function parseMakers(html) {
-	const match = html.match(/var AR_OPTIONS_JS = (\{.*?\});/);
-	if (!match) throw new Error("Não achei AR_OPTIONS_JS no mapa do Apostolado.");
-	const data = JSON.parse(match[1]);
-	return Object.values(data.makers ?? {});
+	const marker = "var AR_OPTIONS_JS = ";
+	const start = html.indexOf(marker);
+	if (start < 0) {
+		throw new Error("Não achei AR_OPTIONS_JS no mapa do Apostolado.");
+	}
+	const brace = html.indexOf("{", start);
+	let depth = 0;
+	let inString = false;
+	let escaped = false;
+	for (let i = brace; i < html.length; i += 1) {
+		const char = html[i];
+		if (inString) {
+			if (escaped) escaped = false;
+			else if (char === "\\") escaped = true;
+			else if (char === '"') inString = false;
+			continue;
+		}
+		if (char === '"') inString = true;
+		else if (char === "{") depth += 1;
+		else if (char === "}") {
+			depth -= 1;
+			if (depth === 0) {
+				const data = JSON.parse(html.slice(brace, i + 1));
+				return Object.values(data.makers ?? {});
+			}
+		}
+	}
+	throw new Error("JSON do mapa do Apostolado está incompleto.");
 }
 
 function parseLabeled(html, label) {
@@ -251,7 +275,7 @@ async function reverseGeocode(lat, lng) {
 	url.searchParams.set("lon", String(lng));
 	url.searchParams.set("format", "jsonv2");
 	url.searchParams.set("addressdetails", "1");
-	url.searchParams.set("zoom", "16");
+	url.searchParams.set("zoom", "18");
 	const response = await fetch(url, {
 		headers: { Accept: "application/json", "User-Agent": UA },
 	});
@@ -268,7 +292,8 @@ async function reverseGeocode(lat, lng) {
 		address.village ||
 		address.hamlet ||
 		address.suburb ||
-		"";
+		address.municipality ||
+		(address.county || "").replace(/\s+County$/i, "");
 	const street = [address.house_number, address.road].filter(Boolean).join(" ");
 	return {
 		address_line: street || data.name || city,
@@ -460,13 +485,8 @@ async function main() {
 		const rowName = normalizeName(row.name);
 		const extra = maPages.find((page) => {
 			const pageName = normalizeName(page.name);
-			return (
-				pageName &&
-				(rowName.includes(pageName) ||
-					pageName.includes(rowName) ||
-					(row.city &&
-						normalizeName(page.address?.city || "") === normalizeName(row.city)))
-			);
+			if (!pageName || pageName.length < 6) return false;
+			return rowName.includes(pageName) || pageName.includes(rowName);
 		});
 		if (extra) mergePrefer(row, extra);
 	}

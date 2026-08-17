@@ -10,7 +10,7 @@ export function Header() {
 					<small>Comunidades nos EUA</small>
 				</span>
 			</NavLink>
-			<nav>
+			<nav aria-label="Navegação principal">
 				<NavLink to="/" end>
 					Mapa
 				</NavLink>

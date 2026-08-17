@@ -208,6 +208,17 @@ async function attachRelated(
 	}));
 }
 
+export async function listApprovedSitemap(
+	db: D1Database,
+): Promise<Array<{ slug: string; updated_at: string }>> {
+	const rows = await db
+		.prepare(
+			`SELECT slug, updated_at FROM communities WHERE status = 'approved' ORDER BY name`,
+		)
+		.all<{ slug: string; updated_at: string }>();
+	return rows.results ?? [];
+}
+
 export async function listSummaries(
 	db: D1Database,
 	status: CommunityStatus = "approved",

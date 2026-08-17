@@ -45,7 +45,7 @@ export function CommunityPanel({
 					<p className="eyebrow">
 						{community.city}, {community.state}
 					</p>
-					<h2>{community.name}</h2>
+					<h1>{community.name}</h1>
 				</div>
 				<button type="button" className="panel-close" onClick={onClose}>
 					Fechar

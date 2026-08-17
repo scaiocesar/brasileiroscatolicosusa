@@ -145,6 +145,15 @@ textarea {
   border-right: 1px solid var(--line);
 }
 
+.map-sidebar-title {
+  font-family: var(--serif);
+  color: var(--navy);
+  font-size: clamp(1.8rem, 3vw, 2.6rem);
+  line-height: 1.15;
+  margin: 0 0 0.4em;
+  font-weight: 700;
+}
+
 .map-sidebar input,
 .map-sidebar select,
 .community-form input,
@@ -168,28 +177,30 @@ textarea {
   margin: 0;
 }
 
-.community-list button {
+.community-list a {
+  display: block;
   width: 100%;
   text-align: left;
+  text-decoration: none;
+  color: inherit;
   background: transparent;
   border: 0;
   border-bottom: 1px solid var(--line);
   padding: 0.8rem 0.2rem;
-  cursor: pointer;
 }
 
-.community-list button strong,
-.community-list button span {
+.community-list a strong,
+.community-list a span {
   display: block;
 }
 
-.community-list button span {
+.community-list a span {
   color: var(--muted);
   font-size: 0.92rem;
 }
 
-.community-list button.is-active,
-.community-list button:hover {
+.community-list a.is-active,
+.community-list a:hover {
   color: var(--navy);
 }
 
@@ -260,8 +271,10 @@ textarea {
   margin-bottom: 0.6rem;
 }
 
-.panel-head h2 {
+.panel-head h1 {
   margin-bottom: 0;
+  font-size: 1.7rem;
+  line-height: 1.2;
 }
 
 .panel-close {
@@ -553,7 +566,8 @@ button.chip.is-active {
     max-height: 34svh;
   }
 
-  .map-sidebar h1 {
+  .map-sidebar h1,
+  .map-sidebar-title {
     font-size: 1.35rem;
   }
 
@@ -562,7 +576,8 @@ button.chip.is-active {
     font-size: 0.92rem;
   }
 
-  .map-sidebar h1 + p {
+  .map-sidebar h1 + p,
+  .map-sidebar-title + p {
     display: none;
   }
 

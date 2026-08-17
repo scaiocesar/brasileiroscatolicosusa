@@ -1,15 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { submitSeo } from "../../shared/seo";
 import type { CommunityInput } from "../../shared/types";
 import { fetchConfig, submitCommunity } from "../api";
 import { CommunityForm } from "../components/CommunityForm";
 import { Header } from "../components/Header";
+import { usePageSeo } from "../usePageSeo";
 
 export function SubmitPage() {
 	const [siteKey, setSiteKey] = useState("");
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [done, setDone] = useState(false);
+	usePageSeo(useMemo(() => submitSeo(), []));
 
 	useEffect(() => {
 		fetchConfig().then((config) => setSiteKey(config.turnstileSiteKey));

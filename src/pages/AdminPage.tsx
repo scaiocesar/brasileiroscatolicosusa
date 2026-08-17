@@ -1,5 +1,7 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { adminSeo } from "../../shared/seo";
 import type { Community, CommunityInput, CommunityStatus } from "../../shared/types";
+import { usePageSeo } from "../usePageSeo";
 import {
 	adminDelete,
 	adminImportCsv,
@@ -29,6 +31,7 @@ function statusLabel(status: CommunityStatus): string {
 }
 
 export function AdminPage() {
+	usePageSeo(useMemo(() => adminSeo(), []));
 	const [authed, setAuthed] = useState<boolean | null>(null);
 	const [username, setUsername] = useState("");
 	const [password, setPassword] = useState("");
@@ -192,6 +195,11 @@ export function AdminPage() {
 						</button>
 					</div>
 				</div>
+				<p className="hint">
+					Importar CSV cria cadastros pendentes para revisão. O arquivo
+					<code> data/apostolado-comunidades.csv</code> veio do diretório
+					público do Apostolado Brasileiro.
+				</p>
 
 				<div className="filter-row">
 					{FILTERS.map((item) => (

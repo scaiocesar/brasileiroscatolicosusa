@@ -21,6 +21,7 @@ import {
 	findDuplicateCommunity,
 	getCommunity,
 	listAdminCommunities,
+	listApprovedSitemap,
 	listSummaries,
 	resolveCoordinates,
 	setStatus,
@@ -28,8 +29,10 @@ import {
 	validateInput,
 } from "./db";
 import { formatGeocodeQuery, geocodeAddress } from "./geocode";
+import { applyHtmlSeo, withStatus } from "./seo";
 import { verifyTurnstile } from "./turnstile";
 import { csvRowsToInputs } from "../shared/csv";
+import { buildSitemapXml, seoForPath } from "../shared/seo";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -42,6 +45,28 @@ async function requireAdmin(c: Context<{ Bindings: Env }>): Promise<boolean> {
 	const token = readCookie(c.req.raw.headers.get("Cookie"));
 	return isValidSession(c.env.AUTH_SECRET, token);
 }
+
+app.use("*", async (c, next) => {
+	const url = new URL(c.req.url);
+	if (
+		url.hostname === "www.brasileiroscatolicosusa.org" &&
+		(c.req.method === "GET" || c.req.method === "HEAD")
+	) {
+		url.hostname = "brasileiroscatolicosusa.org";
+		return c.redirect(url.toString(), 301);
+	}
+	await next();
+});
+
+app.get("/sitemap.xml", async (c) => {
+	const communities = await listApprovedSitemap(c.env.DB);
+	return new Response(buildSitemapXml(communities), {
+		headers: {
+			"Content-Type": "application/xml; charset=utf-8",
+			"Cache-Control": "public, max-age=3600",
+		},
+	});
+});
 
 app.get("/api/config", (c) => {
 	return c.json({
@@ -342,6 +367,27 @@ app.delete("/api/admin/communities/:id", async (c) => {
 	return c.json({ ok: true });
 });
 
-app.notFound((c) => c.json({ error: "Não encontrado." }, 404));
+app.notFound(async (c) => {
+	if (c.req.path.startsWith("/api/")) {
+		return c.json({ error: "Não encontrado." }, 404);
+	}
+	return servePublicPage(c);
+});
+
+async function servePublicPage(c: Context<{ Bindings: Env }>): Promise<Response> {
+	const response = await c.env.ASSETS.fetch(c.req.raw);
+	const contentType = response.headers.get("content-type") ?? "";
+	if (!contentType.includes("text/html")) return response;
+
+	const url = new URL(c.req.url);
+	const match = url.pathname.match(/^\/comunidade\/([^/]+)\/?$/);
+	if (match) {
+		const community = await getCommunity(c.env.DB, decodeURIComponent(match[1]));
+		const rewritten = applyHtmlSeo(response, seoForPath(url.pathname, community));
+		return community ? rewritten : withStatus(rewritten, 404);
+	}
+
+	return applyHtmlSeo(response, seoForPath(url.pathname));
+}
 
 export default app;

@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { SERVICE_TYPES, US_STATES } from "../../shared/constants";
+import { communitySeo, homeSeo } from "../../shared/seo";
 import type { Community, CommunitySummary } from "../../shared/types";
 import { fetchCommunities, fetchCommunity } from "../api";
 import { CommunityPanel } from "../components/CommunityPanel";
 import { Header } from "../components/Header";
 import { MapView } from "../components/MapView";
+import { usePageSeo } from "../usePageSeo";
 
 export function HomePage() {
 	const { slug } = useParams();
@@ -54,6 +56,12 @@ export function HomePage() {
 		});
 	}, [communities, query, serviceFilter, stateFilter]);
 
+	const seo = useMemo(
+		() => (selected ? communitySeo(selected) : homeSeo()),
+		[selected],
+	);
+	usePageSeo(seo);
+
 	function selectCommunity(community: CommunitySummary) {
 		navigate(`/comunidade/${community.slug}`);
 	}
@@ -63,16 +71,25 @@ export function HomePage() {
 			<Header />
 			<div className="map-layout">
 				<aside className="map-sidebar">
-					<h1>Encontre sua comunidade</h1>
+					{selected ? (
+						<p className="map-sidebar-title">Encontre sua comunidade</p>
+					) : (
+						<h1 className="map-sidebar-title">Encontre sua comunidade</h1>
+					)}
 					<p>
 						Mapa das comunidades católicas brasileiras nos Estados Unidos.
+						Encontre missas em português, catequese e sacramentos perto de
+						você.
 					</p>
 					<input
+						type="search"
 						placeholder="Buscar por nome ou cidade"
+						aria-label="Buscar comunidade por nome ou cidade"
 						value={query}
 						onChange={(event) => setQuery(event.target.value)}
 					/>
 					<select
+						aria-label="Filtrar por estado"
 						value={stateFilter}
 						onChange={(event) => setStateFilter(event.target.value)}
 					>
@@ -84,6 +101,7 @@ export function HomePage() {
 						))}
 					</select>
 					<select
+						aria-label="Filtrar por serviço"
 						value={serviceFilter}
 						onChange={(event) => setServiceFilter(event.target.value)}
 					>
@@ -101,16 +119,15 @@ export function HomePage() {
 					<ul className="community-list">
 						{filtered.map((community) => (
 							<li key={community.id}>
-								<button
-									type="button"
+								<Link
+									to={`/comunidade/${community.slug}`}
 									className={community.slug === slug ? "is-active" : ""}
-									onClick={() => selectCommunity(community)}
 								>
 									<strong>{community.name}</strong>
 									<span>
 										{community.city}, {community.state}
 									</span>
-								</button>
+								</Link>
 							</li>
 						))}
 					</ul>

@@ -1,0 +1,18 @@
+{
+  "name": "Brasileiros Católicos nos EUA",
+  "short_name": "Católicos EUA",
+  "description": "Mapa das comunidades católicas brasileiras nos Estados Unidos. Encontre missas em português, catequese e serviços perto de você.",
+  "start_url": "/",
+  "display": "browser",
+  "background_color": "#f7f3ea",
+  "theme_color": "#1b2a4a",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
