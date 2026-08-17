@@ -24,7 +24,7 @@
 	],
 	"upload_source_maps": true,
 	"vars": {
-		"TURNSTILE_SITE_KEY": "1x00000000000000000000AA"
+		"TURNSTILE_SITE_KEY": "0x4AAAAAAES8mfiaIh_2lxwC"
 	},
 	"d1_databases": [
 		{

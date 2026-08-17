@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import type { Community, CommunityInput, CommunityStatus } from "../../shared/types";
 import {
 	adminDelete,
+	adminImportCsv,
 	adminList,
 	adminLogin,
 	adminLogout,
@@ -39,6 +40,8 @@ export function AdminPage() {
 	const [editing, setEditing] = useState<Community | "new" | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
+	const [importing, setImporting] = useState(false);
+	const [importResult, setImportResult] = useState<string | null>(null);
 
 	async function load(nextFilter = filter) {
 		const list = await adminList(nextFilter || undefined);
@@ -79,6 +82,28 @@ export function AdminPage() {
 			setError(err instanceof Error ? err.message : "Não foi possível salvar.");
 		} finally {
 			setBusy(false);
+		}
+	}
+
+	async function handleImport(file: File) {
+		setImporting(true);
+		setError(null);
+		setImportResult(null);
+		try {
+			const csv = await file.text();
+			const result = await adminImportCsv(csv);
+			setFilter("pending");
+			await load("pending");
+			const extra = result.errors.length
+				? ` ${result.errors.slice(0, 8).join(" ")}`
+				: "";
+			setImportResult(
+				`${result.imported} importada(s) como pendente. ${result.skipped} ignorada(s).${extra}`,
+			);
+		} catch (err) {
+			setError(err instanceof Error ? err.message : "Não foi possível importar.");
+		} finally {
+			setImporting(false);
 		}
 	}
 
@@ -139,6 +164,19 @@ export function AdminPage() {
 						<h1>Gerenciar comunidades</h1>
 					</div>
 					<div className="admin-actions">
+						<label className="file-button">
+							<input
+								type="file"
+								accept=".csv,text/csv"
+								disabled={importing}
+								onChange={async (event) => {
+									const file = event.target.files?.[0];
+									event.target.value = "";
+									if (file) await handleImport(file);
+								}}
+							/>
+							{importing ? "Importando..." : "Importar CSV"}
+						</label>
 						<button type="button" className="secondary" onClick={() => setEditing("new")}>
 							Nova comunidade
 						</button>
@@ -177,6 +215,7 @@ export function AdminPage() {
 				</div>
 
 				{error ? <p className="form-error">{error}</p> : null}
+				{importResult ? <p className="form-ok">{importResult}</p> : null}
 
 				{editing ? (
 					<section className="editor-card">

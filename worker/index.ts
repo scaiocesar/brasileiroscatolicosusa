@@ -18,6 +18,7 @@ import {
 import {
 	createCommunity,
 	deleteCommunity,
+	findDuplicateCommunity,
 	getCommunity,
 	listAdminCommunities,
 	listSummaries,
@@ -28,6 +29,7 @@ import {
 } from "./db";
 import { formatGeocodeQuery, geocodeAddress } from "./geocode";
 import { verifyTurnstile } from "./turnstile";
+import { csvRowsToInputs } from "../shared/csv";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -229,6 +231,66 @@ app.post("/api/admin/communities", async (c) => {
 		input.status ?? "approved",
 	);
 	return c.json({ community }, 201);
+});
+
+app.post("/api/admin/communities/import", async (c) => {
+	if (!(await requireAdmin(c))) return c.json({ error: "Não autorizado." }, 401);
+	const body = (await c.req.json().catch(() => null)) as { csv?: string } | null;
+	if (!body?.csv?.trim()) {
+		return c.json({ error: "Envie o conteúdo do CSV." }, 400);
+	}
+
+	const parsed = csvRowsToInputs(body.csv);
+	if (parsed.inputs.length === 0) {
+		return c.json(
+			{
+				error: parsed.errors[0] || "Nenhuma comunidade válida no CSV.",
+				imported: 0,
+				skipped: 0,
+				errors: parsed.errors,
+			},
+			400,
+		);
+	}
+
+	const errors = [...parsed.errors];
+	let imported = 0;
+	let skipped = 0;
+
+	for (const input of parsed.inputs) {
+		const duplicate = await findDuplicateCommunity(
+			c.env.DB,
+			input.name,
+			input.city,
+			input.state,
+		);
+		if (duplicate) {
+			skipped += 1;
+			errors.push(`${input.name} (${input.city}, ${input.state}): já cadastrada.`);
+			continue;
+		}
+
+		const valid = validateInput(input);
+		if (valid) {
+			skipped += 1;
+			errors.push(`${input.name}: ${valid}`);
+			continue;
+		}
+
+		const coords = await resolveCoordinates(input, geocodeAddress);
+		if (!coords) {
+			skipped += 1;
+			errors.push(
+				`${input.name}: não foi possível localizar o endereço. Ajuste no CSV e importe de novo.`,
+			);
+			continue;
+		}
+
+		await createCommunity(c.env.DB, input, coords, "pending");
+		imported += 1;
+	}
+
+	return c.json({ ok: true, imported, skipped, errors });
 });
 
 app.put("/api/admin/communities/:id", async (c) => {

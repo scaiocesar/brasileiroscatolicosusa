@@ -118,6 +118,33 @@ export async function adminSave(
 	return data.community;
 }
 
+export async function adminImportCsv(csv: string): Promise<{
+	imported: number;
+	skipped: number;
+	errors: string[];
+}> {
+	const response = await fetch("/api/admin/communities/import", {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		credentials: "include",
+		body: JSON.stringify({ csv }),
+	});
+	const data = (await response.json().catch(() => null)) as {
+		error?: string;
+		imported?: number;
+		skipped?: number;
+		errors?: string[];
+	} | null;
+	if (!response.ok) {
+		throw new Error(data?.error || "Não foi possível importar o CSV.");
+	}
+	return {
+		imported: data?.imported ?? 0,
+		skipped: data?.skipped ?? 0,
+		errors: data?.errors ?? [],
+	};
+}
+
 export async function adminSetStatus(
 	id: number,
 	action: "approve" | "reject",

@@ -19,7 +19,7 @@ npm run dev
 - Usuário local: `caio`
 - Senha local: veja `.dev.vars` (`ADMIN_PASSWORD`)
 
-O Turnstile de desenvolvimento usa as chaves de teste da Cloudflare (sempre aprovam).
+O Turnstile usa um widget real da Cloudflare (domínio + localhost). O sitekey fica em `wrangler.jsonc`; o secret só em `.dev.vars` e nos secrets do Worker.
 
 ## Deploy na Cloudflare
 

@@ -229,6 +229,10 @@ textarea {
   transform: rotate(-45deg) scale(1.15);
 }
 
+.community-panel-backdrop {
+  display: none;
+}
+
 .community-panel {
   position: absolute;
   top: 1rem;
@@ -240,15 +244,33 @@ textarea {
   border-radius: 18px;
   padding: 1.2rem;
   box-shadow: var(--shadow);
-  z-index: 500;
+  z-index: 1100;
+  overscroll-behavior: contain;
+}
+
+.panel-handle {
+  display: none;
+}
+
+.panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin-bottom: 0.6rem;
+}
+
+.panel-head h2 {
+  margin-bottom: 0;
 }
 
 .panel-close {
-  float: right;
+  flex-shrink: 0;
   border: 0;
   background: transparent;
   cursor: pointer;
   color: var(--muted);
+  padding: 0.35rem 0.6rem;
 }
 
 .eyebrow {
@@ -412,6 +434,32 @@ button.chip.is-active {
   font-weight: 600;
 }
 
+.form-ok {
+  color: var(--ok);
+  font-weight: 600;
+}
+
+.file-button {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  background: white;
+  color: var(--navy);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.55rem 1rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.file-button input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
 .success-card {
   text-align: center;
   padding: 2rem;
@@ -460,7 +508,6 @@ button.chip.is-active {
 }
 
 @media (max-width: 900px) {
-  .map-layout,
   .grid-2,
   .schedule-row,
   .admin-list li {
@@ -468,21 +515,116 @@ button.chip.is-active {
     display: block;
   }
 
+  .site-header {
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    padding: 0.55rem 0.9rem;
+    gap: 0.6rem;
+  }
+
+  .site-header nav {
+    gap: 0.2rem;
+  }
+
+  .site-header nav a {
+    padding: 0.3rem 0.55rem;
+    font-size: 0.9rem;
+  }
+
+  .map-shell {
+    height: 100svh;
+    overflow: hidden;
+  }
+
   .map-layout {
     display: flex;
     flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .map-sidebar {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    padding: 0.9rem 1rem 0.7rem;
+    max-height: 34svh;
+  }
+
+  .map-sidebar h1 {
+    font-size: 1.35rem;
+  }
+
+  .map-sidebar p {
+    margin-bottom: 0.6rem;
+    font-size: 0.92rem;
+  }
+
+  .map-sidebar h1 + p {
+    display: none;
+  }
+
+  .community-list {
+    flex: 1;
+    overflow: auto;
+    min-height: 0;
+  }
+
+  .map-stage {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .map-canvas,
+  .map-stage .leaflet-container {
+    min-height: 0;
+    height: 100%;
+  }
+
+  .community-panel-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 1050;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: rgba(16, 24, 44, 0.46);
   }
 
   .community-panel {
-    position: static;
-    width: auto;
-    max-height: none;
-    margin: 0.8rem;
+    position: fixed;
+    top: auto;
+    right: 0;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    margin: 0;
+    max-height: min(58svh, 520px);
+    border-radius: 20px 20px 0 0;
+    padding: 0.45rem 1.15rem calc(1.15rem + env(safe-area-inset-bottom));
+    z-index: 1100;
   }
 
-  .site-header {
-    flex-direction: column;
-    align-items: flex-start;
+  .panel-handle {
+    display: block;
+    width: 42px;
+    height: 4px;
+    margin: 0.2rem auto 0.75rem;
+    border-radius: 999px;
+    background: var(--line);
+  }
+
+  .panel-close {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  body.panel-open {
+    overflow: hidden;
   }
 
   .row-actions {

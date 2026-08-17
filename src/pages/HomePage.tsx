@@ -35,6 +35,11 @@ export function HomePage() {
 			.catch(() => setSelected(null));
 	}, [slug]);
 
+	useEffect(() => {
+		document.body.classList.toggle("panel-open", Boolean(selected));
+		return () => document.body.classList.remove("panel-open");
+	}, [selected]);
+
 	const filtered = useMemo(() => {
 		const needle = query.trim().toLowerCase();
 		return communities.filter((community) => {
@@ -117,10 +122,18 @@ export function HomePage() {
 						onSelect={selectCommunity}
 					/>
 					{selected ? (
-						<CommunityPanel
-							community={selected}
-							onClose={() => navigate("/")}
-						/>
+						<>
+							<button
+								type="button"
+								className="community-panel-backdrop"
+								aria-label="Fechar detalhes da comunidade"
+								onClick={() => navigate("/")}
+							/>
+							<CommunityPanel
+								community={selected}
+								onClose={() => navigate("/")}
+							/>
+						</>
 					) : null}
 				</div>
 			</div>

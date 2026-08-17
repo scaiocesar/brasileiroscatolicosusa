@@ -13,7 +13,23 @@ function FlyToSelected({
 	const map = useMap();
 	useEffect(() => {
 		if (!community) return;
-		map.flyTo([community.lat, community.lng], 11, { duration: 0.8 });
+		const isMobile = window.matchMedia("(max-width: 900px)").matches;
+		map.flyTo([community.lat, community.lng], isMobile ? 12 : 11, {
+			duration: 0.8,
+		});
+		if (!isMobile) return;
+
+		const onMoveEnd = () => {
+			map.panBy([0, Math.round(map.getSize().y * 0.22)], {
+				animate: true,
+				duration: 0.35,
+			});
+			map.off("moveend", onMoveEnd);
+		};
+		map.on("moveend", onMoveEnd);
+		return () => {
+			map.off("moveend", onMoveEnd);
+		};
 	}, [community, map]);
 	return null;
 }

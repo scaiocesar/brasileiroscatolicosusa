@@ -1,5 +1,5 @@
 ADMIN_USERNAME=caio
 ADMIN_PASSWORD=replace-with-a-long-random-password
 AUTH_SECRET=replace-with-a-long-random-string
-TURNSTILE_SITE_KEY=1x00000000000000000000AA
-TURNSTILE_SECRET=1x0000000000000000000000000000000AA
+TURNSTILE_SITE_KEY=replace-with-your-turnstile-sitekey
+TURNSTILE_SECRET=replace-with-your-turnstile-secret

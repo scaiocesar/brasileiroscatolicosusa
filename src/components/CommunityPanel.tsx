@@ -39,13 +39,18 @@ export function CommunityPanel({
 
 	return (
 		<aside className="community-panel" aria-label="Detalhes da comunidade">
-			<button type="button" className="panel-close" onClick={onClose}>
-				Fechar
-			</button>
-			<p className="eyebrow">
-				{community.city}, {community.state}
-			</p>
-			<h2>{community.name}</h2>
+			<div className="panel-handle" aria-hidden="true" />
+			<div className="panel-head">
+				<div>
+					<p className="eyebrow">
+						{community.city}, {community.state}
+					</p>
+					<h2>{community.name}</h2>
+				</div>
+				<button type="button" className="panel-close" onClick={onClose}>
+					Fechar
+				</button>
+			</div>
 			{community.description ? <p>{community.description}</p> : null}
 
 			<section>

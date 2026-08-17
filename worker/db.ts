@@ -73,6 +73,25 @@ async function uniqueSlug(
 	}
 }
 
+export async function findDuplicateCommunity(
+	db: D1Database,
+	name: string,
+	city: string,
+	state: string,
+): Promise<number | null> {
+	const row = await db
+		.prepare(
+			`SELECT id FROM communities
+       WHERE lower(trim(name)) = lower(trim(?))
+         AND lower(trim(city)) = lower(trim(?))
+         AND upper(state) = upper(?)
+       LIMIT 1`,
+		)
+		.bind(name, city, state)
+		.first<{ id: number }>();
+	return row?.id ?? null;
+}
+
 function emptyToNull(value: string | null | undefined): string | null {
 	if (value == null) return null;
 	const trimmed = value.trim();
