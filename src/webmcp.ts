@@ -57,7 +57,11 @@ export function communityDetails(community: Community) {
 		lat: community.lat,
 		lng: community.lng,
 		address_line: community.address_line,
+		approved_at: community.approved_at,
 		services: community.services.map((item) => item.service_type),
+		sunday_masses: community.mass_schedules
+			.filter((item) => item.day_of_week === 0)
+			.map((item) => item.time),
 	};
 	return {
 		...communityCard(summary),
@@ -67,6 +71,7 @@ export function communityDetails(community: Community) {
 		lng: community.lng,
 		website_url: community.website_url,
 		whatsapp: community.whatsapp,
+		whatsapp_group_url: community.whatsapp_group_url,
 		instagram: community.instagram,
 		facebook: community.facebook,
 		email: community.email,

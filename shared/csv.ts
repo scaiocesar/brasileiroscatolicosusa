@@ -16,6 +16,7 @@ export const COMMUNITY_CSV_COLUMNS = [
 	"instagram",
 	"facebook",
 	"whatsapp",
+	"whatsapp_group_url",
 	"mass_schedules",
 	"services",
 	"source_url",
@@ -40,6 +41,7 @@ export type CommunityCsvRow = {
 	instagram: string;
 	facebook: string;
 	whatsapp: string;
+	whatsapp_group_url: string;
 	mass_schedules: string;
 	services: string;
 	source_url: string;
@@ -232,6 +234,7 @@ export function csvRowsToInputs(text: string): {
 			instagram: cell(row, index, "instagram") || null,
 			facebook: cell(row, index, "facebook") || null,
 			whatsapp: cell(row, index, "whatsapp") || null,
+			whatsapp_group_url: optionalUrl(cell(row, index, "whatsapp_group_url")),
 			admin_notes: notes || null,
 			mass_schedules: parseJsonSchedules(cell(row, index, "mass_schedules")),
 			services: parseServices(cell(row, index, "services")),

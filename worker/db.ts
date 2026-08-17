@@ -27,6 +27,7 @@ type CommunityRow = {
 	lng: number;
 	website_url: string | null;
 	whatsapp: string | null;
+	whatsapp_group_url: string | null;
 	instagram: string | null;
 	facebook: string | null;
 	email: string | null;
@@ -102,6 +103,21 @@ function isValidEmail(value: string): boolean {
 	return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
+function isWhatsappGroupUrl(value: string): boolean {
+	const trimmed = value.trim();
+	const href = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+	try {
+		const host = new URL(href).hostname.replace(/^www\./i, "").toLowerCase();
+		return (
+			host === "chat.whatsapp.com" ||
+			host === "whatsapp.com" ||
+			host.endsWith(".whatsapp.com")
+		);
+	} catch {
+		return false;
+	}
+}
+
 export function validateInput(
 	input: CommunityInput,
 	options: { requireSubmitter?: boolean } = {},
@@ -127,6 +143,9 @@ export function validateInput(
 	}
 	if (input.email && !isValidEmail(input.email)) {
 		return "E-mail da comunidade inválido.";
+	}
+	if (input.whatsapp_group_url?.trim() && !isWhatsappGroupUrl(input.whatsapp_group_url)) {
+		return "Informe um link válido de grupo do WhatsApp.";
 	}
 	if (input.submitted_by_email && !isValidEmail(input.submitted_by_email)) {
 		return "E-mail de contato inválido.";
@@ -237,15 +256,15 @@ export async function listSummaries(
 	const rows = await db
 		.prepare(
 			`SELECT c.id, c.slug, c.name, c.city, c.state, c.lat, c.lng, c.address_line,
-        GROUP_CONCAT(s.service_type) AS service_list
+        c.approved_at,
+        (SELECT GROUP_CONCAT(s.service_type) FROM community_services s WHERE s.community_id = c.id) AS service_list,
+        (SELECT GROUP_CONCAT(m.time) FROM mass_schedules m WHERE m.community_id = c.id AND m.day_of_week = 0) AS sunday_list
        FROM communities c
-       LEFT JOIN community_services s ON s.community_id = c.id
        WHERE c.status = ?
-       GROUP BY c.id
        ORDER BY c.name`,
 		)
 		.bind(status)
-		.all<CommunitySummary & { service_list: string | null }>();
+		.all<CommunitySummary & { service_list: string | null; sunday_list: string | null }>();
 
 	return (rows.results ?? []).map((row) => ({
 		id: row.id,
@@ -256,7 +275,9 @@ export async function listSummaries(
 		lat: row.lat,
 		lng: row.lng,
 		address_line: row.address_line,
+		approved_at: row.approved_at,
 		services: row.service_list ? row.service_list.split(",") : [],
+		sunday_masses: row.sunday_list ? row.sunday_list.split(",") : [],
 	}));
 }
 
@@ -361,9 +382,9 @@ export async function createCommunity(
 		.prepare(
 			`INSERT INTO communities (
         slug, name, description, address_line, city, state, zip, lat, lng,
-        website_url, whatsapp, instagram, facebook, email, phone, status,
+        website_url, whatsapp, whatsapp_group_url, instagram, facebook, email, phone, status,
         submitted_by_name, submitted_by_email, admin_notes, approved_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		)
 		.bind(
 			slug,
@@ -377,6 +398,7 @@ export async function createCommunity(
 			coords.lng,
 			emptyToNull(input.website_url),
 			emptyToNull(input.whatsapp),
+			emptyToNull(input.whatsapp_group_url),
 			emptyToNull(input.instagram),
 			emptyToNull(input.facebook),
 			emptyToNull(input.email),
@@ -420,7 +442,7 @@ export async function updateCommunity(
 		.prepare(
 			`UPDATE communities SET
         slug = ?, name = ?, description = ?, address_line = ?, city = ?, state = ?, zip = ?,
-        lat = ?, lng = ?, website_url = ?, whatsapp = ?, instagram = ?, facebook = ?,
+        lat = ?, lng = ?, website_url = ?, whatsapp = ?, whatsapp_group_url = ?, instagram = ?, facebook = ?,
         email = ?, phone = ?, status = ?, submitted_by_name = ?, submitted_by_email = ?,
         admin_notes = ?, approved_at = ?, updated_at = datetime('now')
        WHERE id = ?`,
@@ -437,6 +459,7 @@ export async function updateCommunity(
 			coords.lng,
 			emptyToNull(input.website_url),
 			emptyToNull(input.whatsapp),
+			emptyToNull(input.whatsapp_group_url),
 			emptyToNull(input.instagram),
 			emptyToNull(input.facebook),
 			emptyToNull(input.email),

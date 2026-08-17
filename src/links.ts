@@ -1,3 +1,5 @@
+import { SITE_ORIGIN } from "../shared/seo";
+
 export function externalUrl(value: string | null | undefined): string | null {
 	if (!value) return null;
 	const trimmed = value.trim();
@@ -11,6 +13,32 @@ export function whatsappUrl(value: string | null | undefined): string | null {
 	const digits = value.replace(/\D/g, "");
 	if (!digits) return null;
 	return `https://wa.me/${digits}`;
+}
+
+export function whatsappGroupUrl(value: string | null | undefined): string | null {
+	const url = externalUrl(value);
+	if (!url) return null;
+	try {
+		const host = new URL(url).hostname.replace(/^www\./i, "").toLowerCase();
+		if (
+			host === "chat.whatsapp.com" ||
+			host === "whatsapp.com" ||
+			host.endsWith(".whatsapp.com")
+		) {
+			return url;
+		}
+		return null;
+	} catch {
+		return null;
+	}
+}
+
+export function communityShareUrl(slug: string): string {
+	return `${SITE_ORIGIN}/comunidade/${slug}`;
+}
+
+export function whatsappShareUrl(text: string): string {
+	return `https://wa.me/?text=${encodeURIComponent(text)}`;
 }
 
 export function instagramUrl(value: string | null | undefined): string | null {

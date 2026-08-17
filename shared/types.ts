@@ -27,6 +27,7 @@ export type Community = {
 	lng: number;
 	website_url: string | null;
 	whatsapp: string | null;
+	whatsapp_group_url: string | null;
 	instagram: string | null;
 	facebook: string | null;
 	email: string | null;
@@ -44,9 +45,18 @@ export type Community = {
 
 export type CommunitySummary = Pick<
 	Community,
-	"id" | "slug" | "name" | "city" | "state" | "lat" | "lng" | "address_line"
+	| "id"
+	| "slug"
+	| "name"
+	| "city"
+	| "state"
+	| "lat"
+	| "lng"
+	| "address_line"
+	| "approved_at"
 > & {
 	services: string[];
+	sunday_masses: string[];
 };
 
 export type CommunityInput = {
@@ -60,6 +70,7 @@ export type CommunityInput = {
 	lng?: number | null;
 	website_url?: string | null;
 	whatsapp?: string | null;
+	whatsapp_group_url?: string | null;
 	instagram?: string | null;
 	facebook?: string | null;
 	email?: string | null;

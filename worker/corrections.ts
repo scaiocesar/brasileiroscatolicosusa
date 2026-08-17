@@ -30,6 +30,7 @@ export function sanitizeProposed(input: CommunityInput): CommunityInput {
 		lng: input.lng ?? null,
 		website_url: input.website_url ?? null,
 		whatsapp: input.whatsapp ?? null,
+		whatsapp_group_url: input.whatsapp_group_url ?? null,
 		instagram: input.instagram ?? null,
 		facebook: input.facebook ?? null,
 		email: input.email ?? null,

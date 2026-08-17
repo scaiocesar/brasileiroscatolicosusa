@@ -6,29 +6,18 @@ import {
 	useLocation,
 	useNavigate,
 } from "react-router-dom";
-import { GA_MEASUREMENT_ID } from "../shared/seo";
+import { trackPageView } from "./analytics";
+import { CookieConsentBanner } from "./components/CookieConsent";
 import { AdminPage } from "./pages/AdminPage";
 import { CorrectPage } from "./pages/CorrectPage";
 import { HomePage } from "./pages/HomePage";
 import { SubmitPage } from "./pages/SubmitPage";
 import { useWebMcpTools, type WebMcpTool } from "./useWebMcpTools";
 
-declare global {
-	interface Window {
-		dataLayer: unknown[];
-		gtag?: (...args: unknown[]) => void;
-	}
-}
-
 function Analytics() {
 	const location = useLocation();
 	useEffect(() => {
-		window.gtag?.("event", "page_view", {
-			page_title: document.title,
-			page_location: window.location.href,
-			page_path: location.pathname + location.search,
-			send_to: GA_MEASUREMENT_ID,
-		});
+		trackPageView(location.pathname + location.search, document.title);
 	}, [location]);
 	return null;
 }
@@ -89,6 +78,7 @@ export default function App() {
 				<Route path="/admin" element={<AdminPage />} />
 			</Routes>
 			<Analytics />
+			<CookieConsentBanner />
 			<WebMcpNavigation />
 		</BrowserRouter>
 	);

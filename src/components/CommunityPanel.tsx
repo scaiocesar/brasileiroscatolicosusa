@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
 	MASS_LANGUAGES,
@@ -7,10 +8,13 @@ import {
 } from "../../shared/constants";
 import type { Community } from "../../shared/types";
 import {
+	communityShareUrl,
 	externalUrl,
 	facebookUrl,
 	instagramUrl,
 	mapsUrl,
+	whatsappGroupUrl,
+	whatsappShareUrl,
 	whatsappUrl,
 } from "../links";
 
@@ -33,8 +37,10 @@ export function CommunityPanel({
 	community: Community;
 	onClose: () => void;
 }) {
+	const [copied, setCopied] = useState(false);
 	const site = externalUrl(community.website_url);
 	const whatsapp = whatsappUrl(community.whatsapp);
+	const group = whatsappGroupUrl(community.whatsapp_group_url);
 	const instagram = instagramUrl(community.instagram);
 	const facebook = facebookUrl(community.facebook);
 	const maps = mapsUrl(
@@ -42,6 +48,18 @@ export function CommunityPanel({
 		community.city,
 		community.state,
 	);
+	const shareUrl = communityShareUrl(community.slug);
+	const shareText = `${community.name} — missa em português em ${community.city}, ${community.state}\n${shareUrl}`;
+
+	async function copyLink() {
+		try {
+			await navigator.clipboard.writeText(shareUrl);
+			setCopied(true);
+			window.setTimeout(() => setCopied(false), 2000);
+		} catch {
+			setCopied(false);
+		}
+	}
 
 	return (
 		<aside className="community-panel" aria-label="Detalhes da comunidade">
@@ -114,6 +132,11 @@ export function CommunityPanel({
 						WhatsApp
 					</a>
 				) : null}
+				{group ? (
+					<a href={group} target="_blank" rel="noreferrer">
+						Entrar no grupo
+					</a>
+				) : null}
 				{instagram ? (
 					<a href={instagram} target="_blank" rel="noreferrer">
 						Instagram
@@ -131,6 +154,24 @@ export function CommunityPanel({
 					<a href={`tel:${community.phone}`}>{community.phone}</a>
 				) : null}
 			</section>
+
+			<section className="share-actions">
+				<h3>Compartilhar</h3>
+				<div className="share-row">
+					<a
+						className="button-link"
+						href={whatsappShareUrl(shareText)}
+						target="_blank"
+						rel="noreferrer"
+					>
+						Enviar no WhatsApp
+					</a>
+					<button type="button" className="secondary" onClick={copyLink}>
+						{copied ? "Link copiado" : "Copiar link"}
+					</button>
+				</div>
+			</section>
+
 			<p className="panel-correct">
 				<Link to={`/comunidade/${community.slug}/corrigir`}>
 					Corrigir informações

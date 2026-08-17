@@ -33,6 +33,7 @@ export function toPublicCommunity(community: Community): PublicCommunity {
 		lng: community.lng,
 		website_url: community.website_url,
 		whatsapp: community.whatsapp,
+		whatsapp_group_url: community.whatsapp_group_url,
 		instagram: community.instagram,
 		facebook: community.facebook,
 		email: community.email,
@@ -217,6 +218,9 @@ export function communityMarkdown(community: PublicCommunity): string {
 		community.email ? `- E-mail: ${community.email}` : null,
 		community.website_url ? `- Site: ${community.website_url}` : null,
 		community.whatsapp ? `- WhatsApp: ${community.whatsapp}` : null,
+		community.whatsapp_group_url
+			? `- Grupo WhatsApp: ${community.whatsapp_group_url}`
+			: null,
 		community.instagram ? `- Instagram: ${community.instagram}` : null,
 		community.facebook ? `- Facebook: ${community.facebook}` : null,
 	].filter((item): item is string => Boolean(item));

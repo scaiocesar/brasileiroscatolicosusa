@@ -49,6 +49,7 @@ function proposedCommunity(correction: CommunityCorrection): Community {
 		lng: proposed.lng ?? 0,
 		website_url: proposed.website_url ?? null,
 		whatsapp: proposed.whatsapp ?? null,
+		whatsapp_group_url: proposed.whatsapp_group_url ?? null,
 		instagram: proposed.instagram ?? null,
 		facebook: proposed.facebook ?? null,
 		email: proposed.email ?? null,

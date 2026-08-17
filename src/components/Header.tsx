@@ -1,7 +1,13 @@
 import { NavLink } from "react-router-dom";
 import { SITE_EMAIL } from "../../shared/seo";
 
-export function Header() {
+export function Header({
+	menuOpen,
+	onToggleMenu,
+}: {
+	menuOpen?: boolean;
+	onToggleMenu?: () => void;
+}) {
 	return (
 		<header className="site-header">
 			<NavLink to="/" className="brand">
@@ -12,6 +18,16 @@ export function Header() {
 				</span>
 			</NavLink>
 			<nav aria-label="Navegação principal">
+				{onToggleMenu ? (
+					<button
+						type="button"
+						className="header-menu-toggle"
+						onClick={onToggleMenu}
+						aria-expanded={menuOpen}
+					>
+						{menuOpen ? "Ocultar menu" : "Mostrar menu"}
+					</button>
+				) : null}
 				<NavLink to="/" end>
 					Mapa
 				</NavLink>

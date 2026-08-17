@@ -9,6 +9,7 @@ import { communitySeo, homeSeo, SITE_EMAIL } from "../../shared/seo";
 import type { Community, CommunitySummary } from "../../shared/types";
 import { fetchCommunities, fetchCommunity } from "../api";
 import { CommunityPanel } from "../components/CommunityPanel";
+import { CoverageHighlights } from "../components/CoverageHighlights";
 import { Header } from "../components/Header";
 import { MapView } from "../components/MapView";
 import { usePageSeo } from "../usePageSeo";
@@ -34,6 +35,15 @@ export function HomePage() {
 	const [stateFilter, setStateFilter] = useState("");
 	const [serviceFilter, setServiceFilter] = useState("");
 	const [error, setError] = useState<string | null>(null);
+	const [sidebarOpen, setSidebarOpen] = useState(
+		() =>
+			typeof window === "undefined" ||
+			!window.matchMedia("(max-width: 900px)").matches,
+	);
+
+	function isMobileMap() {
+		return window.matchMedia("(max-width: 900px)").matches;
+	}
 
 	useEffect(() => {
 		fetchCommunities()
@@ -76,6 +86,7 @@ export function HomePage() {
 
 	function selectCommunity(community: CommunitySummary) {
 		navigate(`/comunidade/${community.slug}`);
+		if (isMobileMap()) setSidebarOpen(false);
 	}
 
 	const mapTools = useMemo((): WebMcpTool[] => {
@@ -246,14 +257,28 @@ export function HomePage() {
 
 	return (
 		<div className="app-shell map-shell">
-			<Header />
-			<div className="map-layout">
-				<aside className="map-sidebar">
-					{selected ? (
-						<p className="map-sidebar-title">Encontre sua comunidade</p>
-					) : (
-						<h1 className="map-sidebar-title">Encontre sua comunidade</h1>
-					)}
+			<Header
+				menuOpen={sidebarOpen}
+				onToggleMenu={() => setSidebarOpen((open) => !open)}
+			/>
+			<div
+				className={`map-layout${sidebarOpen ? " sidebar-open" : " sidebar-collapsed"}`}
+			>
+				<aside className="map-sidebar" aria-hidden={!sidebarOpen}>
+					<div className="map-sidebar-head">
+						{selected ? (
+							<p className="map-sidebar-title">Encontre sua comunidade</p>
+						) : (
+							<h1 className="map-sidebar-title">Encontre sua comunidade</h1>
+						)}
+						<button
+							type="button"
+							className="ghost sidebar-hide"
+							onClick={() => setSidebarOpen(false)}
+						>
+							Ocultar menu
+						</button>
+					</div>
 					<p>
 						Mapa das comunidades católicas brasileiras nos Estados Unidos.
 						Encontre missas em português, catequese e sacramentos perto de
@@ -304,6 +329,9 @@ export function HomePage() {
 								<Link
 									to={`/comunidade/${community.slug}`}
 									className={community.slug === slug ? "is-active" : ""}
+									onClick={() => {
+										if (isMobileMap()) setSidebarOpen(false);
+									}}
 								>
 									<strong>{community.name}</strong>
 									<span>
@@ -313,12 +341,28 @@ export function HomePage() {
 							</li>
 						))}
 					</ul>
+					<CoverageHighlights
+						communities={communities}
+						onNavigate={() => {
+							if (isMobileMap()) setSidebarOpen(false);
+						}}
+					/>
 				</aside>
 				<div className="map-stage">
+					{!sidebarOpen ? (
+						<button
+							type="button"
+							className="map-list-toggle"
+							onClick={() => setSidebarOpen(true)}
+						>
+							Mostrar menu
+						</button>
+					) : null}
 					<MapView
 						communities={filtered}
 						selectedSlug={slug}
 						onSelect={selectCommunity}
+						layoutToken={sidebarOpen}
 					/>
 					{selected ? (
 						<>

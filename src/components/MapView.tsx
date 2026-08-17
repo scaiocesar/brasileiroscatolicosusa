@@ -5,6 +5,15 @@ import type { CommunitySummary } from "../../shared/types";
 import { pinIcon } from "./pinIcon";
 import "leaflet/dist/leaflet.css";
 
+function InvalidateSize({ token }: { token: boolean }) {
+	const map = useMap();
+	useEffect(() => {
+		const id = window.requestAnimationFrame(() => map.invalidateSize());
+		return () => window.cancelAnimationFrame(id);
+	}, [map, token]);
+	return null;
+}
+
 function FlyToSelected({
 	community,
 }: {
@@ -38,10 +47,12 @@ export function MapView({
 	communities,
 	selectedSlug,
 	onSelect,
+	layoutToken,
 }: {
 	communities: CommunitySummary[];
 	selectedSlug?: string | null;
 	onSelect: (community: CommunitySummary) => void;
+	layoutToken?: boolean;
 }) {
 	const selected =
 		communities.find((item) => item.slug === selectedSlug) ?? null;
@@ -58,6 +69,7 @@ export function MapView({
 				attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
 				url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
 			/>
+			<InvalidateSize token={Boolean(layoutToken)} />
 			<FlyToSelected community={selected} />
 			{communities.map((community) => (
 				<Marker

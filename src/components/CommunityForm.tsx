@@ -29,6 +29,7 @@ function communityToInput(community?: Community): CommunityInput {
 			lng: US_CENTER[1],
 			website_url: "",
 			whatsapp: "",
+			whatsapp_group_url: "",
 			instagram: "",
 			facebook: "",
 			email: "",
@@ -37,9 +38,7 @@ function communityToInput(community?: Community): CommunityInput {
 			submitted_by_email: "",
 			admin_notes: "",
 			status: "pending",
-			mass_schedules: [
-				{ day_of_week: 0, time: "11:00", language: "pt", notes: "" },
-			],
+			mass_schedules: [],
 			services: [{ service_type: "missa" }],
 		};
 	}
@@ -55,6 +54,7 @@ function communityToInput(community?: Community): CommunityInput {
 		lng: community.lng,
 		website_url: community.website_url ?? "",
 		whatsapp: community.whatsapp ?? "",
+		whatsapp_group_url: community.whatsapp_group_url ?? "",
 		instagram: community.instagram ?? "",
 		facebook: community.facebook ?? "",
 		email: community.email ?? "",
@@ -63,10 +63,7 @@ function communityToInput(community?: Community): CommunityInput {
 		submitted_by_email: community.submitted_by_email ?? "",
 		admin_notes: community.admin_notes ?? "",
 		status: community.status,
-		mass_schedules:
-			community.mass_schedules.length > 0
-				? community.mass_schedules
-				: [{ day_of_week: 0, time: "11:00", language: "pt", notes: "" }],
+		mass_schedules: community.mass_schedules,
 		services:
 			community.services.length > 0
 				? community.services
@@ -298,6 +295,17 @@ export function CommunityForm({
 					/>
 				</label>
 			</div>
+
+			<label>
+				Grupo de WhatsApp
+				<input
+					name="whatsapp_group_url"
+					toolparamdescription="Link do grupo de WhatsApp da comunidade, se houver"
+					value={form.whatsapp_group_url ?? ""}
+					onChange={(event) => update("whatsapp_group_url", event.target.value)}
+					placeholder="https://chat.whatsapp.com/..."
+				/>
+			</label>
 
 			<div className="grid-2">
 				<label>
