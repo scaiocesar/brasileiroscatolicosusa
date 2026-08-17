@@ -93,6 +93,22 @@ export async function findDuplicateCommunity(
 	return row?.id ?? null;
 }
 
+let communitySchemaReady = false;
+
+export async function ensureCommunitySchema(db: D1Database): Promise<void> {
+	if (communitySchemaReady) return;
+	const columns = await db
+		.prepare("PRAGMA table_info(communities)")
+		.all<{ name: string }>();
+	const names = new Set((columns.results ?? []).map((column) => column.name));
+	if (!names.has("whatsapp_group_url")) {
+		await db
+			.prepare("ALTER TABLE communities ADD COLUMN whatsapp_group_url TEXT")
+			.run();
+	}
+	communitySchemaReady = true;
+}
+
 function emptyToNull(value: string | null | undefined): string | null {
 	if (value == null) return null;
 	const trimmed = value.trim();
@@ -103,18 +119,28 @@ function isValidEmail(value: string): boolean {
 	return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
-function isWhatsappGroupUrl(value: string): boolean {
-	const trimmed = value.trim();
-	const href = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+export function normalizeWhatsappGroupUrl(
+	value: string | null | undefined,
+): string | null {
+	if (!value?.trim()) return null;
+	const match =
+		value.match(/https?:\/\/[^\s]+/i) ??
+		value.match(/(?:www\.)?(?:chat\.)?whatsapp\.com\/[^\s]+/i);
+	const raw = (match?.[0] ?? value.trim()).replace(/[),.;]+$/, "");
+	const href = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
 	try {
-		const host = new URL(href).hostname.replace(/^www\./i, "").toLowerCase();
-		return (
+		const url = new URL(href);
+		const host = url.hostname.replace(/^www\./i, "").toLowerCase();
+		if (
 			host === "chat.whatsapp.com" ||
 			host === "whatsapp.com" ||
 			host.endsWith(".whatsapp.com")
-		);
+		) {
+			return url.toString();
+		}
+		return null;
 	} catch {
-		return false;
+		return null;
 	}
 }
 
@@ -144,8 +170,11 @@ export function validateInput(
 	if (input.email && !isValidEmail(input.email)) {
 		return "E-mail da comunidade inválido.";
 	}
-	if (input.whatsapp_group_url?.trim() && !isWhatsappGroupUrl(input.whatsapp_group_url)) {
-		return "Informe um link válido de grupo do WhatsApp.";
+	if (
+		input.whatsapp_group_url?.trim() &&
+		!normalizeWhatsappGroupUrl(input.whatsapp_group_url)
+	) {
+		return "Informe um link válido de grupo do WhatsApp (chat.whatsapp.com).";
 	}
 	if (input.submitted_by_email && !isValidEmail(input.submitted_by_email)) {
 		return "E-mail de contato inválido.";
@@ -372,6 +401,7 @@ export async function createCommunity(
 	coords: { lat: number; lng: number },
 	status: CommunityStatus,
 ): Promise<Community> {
+	await ensureCommunitySchema(db);
 	const slug = await uniqueSlug(
 		db,
 		slugify(`${input.name} ${input.city} ${input.state}`),
@@ -398,7 +428,7 @@ export async function createCommunity(
 			coords.lng,
 			emptyToNull(input.website_url),
 			emptyToNull(input.whatsapp),
-			emptyToNull(input.whatsapp_group_url),
+			normalizeWhatsappGroupUrl(input.whatsapp_group_url),
 			emptyToNull(input.instagram),
 			emptyToNull(input.facebook),
 			emptyToNull(input.email),
@@ -424,6 +454,7 @@ export async function updateCommunity(
 	input: CommunityInput,
 	coords: { lat: number; lng: number },
 ): Promise<Community | null> {
+	await ensureCommunitySchema(db);
 	const existing = await getCommunity(db, String(id), true);
 	if (!existing) return null;
 
@@ -459,7 +490,7 @@ export async function updateCommunity(
 			coords.lng,
 			emptyToNull(input.website_url),
 			emptyToNull(input.whatsapp),
-			emptyToNull(input.whatsapp_group_url),
+			normalizeWhatsappGroupUrl(input.whatsapp_group_url),
 			emptyToNull(input.instagram),
 			emptyToNull(input.facebook),
 			emptyToNull(input.email),

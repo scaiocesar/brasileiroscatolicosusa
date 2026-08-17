@@ -57,6 +57,19 @@ import { isPublicAiPath, jsonPublic, markdownResponse, wantsMarkdown } from "./a
 
 const app = new Hono<{ Bindings: Env }>();
 
+app.onError((err, c) => {
+	const detail = err instanceof Error ? err.message : "";
+	const missingColumn = /no such column/i.test(detail);
+	return c.json(
+		{
+			error: missingColumn
+				? "O banco ainda não tem o campo de grupo do WhatsApp. Rode npm run db:migrate:remote."
+				: "Algo deu errado. Tente novamente.",
+		},
+		500,
+	);
+});
+
 function isSecureRequest(request: Request): boolean {
 	return new URL(request.url).protocol === "https:";
 }
