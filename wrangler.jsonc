@@ -11,6 +11,17 @@
 	"observability": {
 		"enabled": true
 	},
+	"workers_dev": true,
+	"routes": [
+		{
+			"pattern": "brasileiroscatolicosusa.org",
+			"custom_domain": true
+		},
+		{
+			"pattern": "www.brasileiroscatolicosusa.org",
+			"custom_domain": true
+		}
+	],
 	"upload_source_maps": true,
 	"vars": {
 		"TURNSTILE_SITE_KEY": "1x00000000000000000000AA"

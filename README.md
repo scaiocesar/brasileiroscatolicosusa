@@ -49,7 +49,7 @@ Crie um widget no [Cloudflare Turnstile](https://dash.cloudflare.com/?to=/:accou
 npm run deploy
 ```
 
-5. No dashboard da Cloudflare, abra o Worker `brasileiroscatolicosusa` → **Settings** → **Domains & Routes** → **Add** → **Custom Domain** e informe `brasileiroscatolicoseua.com` (e `www` se quiser). O domínio precisa estar na mesma conta Cloudflare, com o DNS apontando para a Cloudflare.
+5. O Worker já publica em `brasileiroscatolicosusa.org` e `www.brasileiroscatolicosusa.org` via Custom Domain no `wrangler.jsonc`.
 
 A publicação remota exige `npx wrangler login` no computador (abre o browser da conta Cloudflare). Sem isso, o app roda só em `npm run dev`.
 
