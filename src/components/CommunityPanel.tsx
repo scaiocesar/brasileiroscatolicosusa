@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { MASS_LANGUAGES, SERVICE_TYPES, WEEKDAYS } from "../../shared/constants";
 import type { Community } from "../../shared/types";
 import {
@@ -125,6 +126,11 @@ export function CommunityPanel({
 					<a href={`tel:${community.phone}`}>{community.phone}</a>
 				) : null}
 			</section>
+			<p className="panel-correct">
+				<Link to={`/comunidade/${community.slug}/corrigir`}>
+					Corrigir informações
+				</Link>
+			</p>
 		</aside>
 	);
 }

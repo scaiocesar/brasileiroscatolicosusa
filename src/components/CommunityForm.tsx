@@ -83,15 +83,25 @@ export function CommunityForm({
 	onSubmit,
 }: {
 	initial?: Community;
-	mode: "public" | "admin";
+	mode: "public" | "admin" | "correction";
 	turnstileSiteKey?: string;
 	busy?: boolean;
 	error?: string | null;
 	onSubmit: (input: CommunityInput) => Promise<void> | void;
 }) {
-	const [form, setForm] = useState<CommunityInput>(() =>
-		communityToInput(initial),
-	);
+	const [form, setForm] = useState<CommunityInput>(() => {
+		const initialForm = communityToInput(initial);
+		if (mode === "correction") {
+			return {
+				...initialForm,
+				submitted_by_name: "",
+				submitted_by_email: "",
+				admin_notes: "",
+				correction_note: "",
+			};
+		}
+		return initialForm;
+	});
 	const [token, setToken] = useState("");
 	const [locateError, setLocateError] = useState<string | null>(null);
 	const [locating, setLocating] = useState(false);
@@ -385,7 +395,7 @@ export function CommunityForm({
 				</div>
 			</fieldset>
 
-			{mode === "public" ? (
+			{mode === "public" || mode === "correction" ? (
 				<div className="grid-2">
 					<label>
 						Seu nome
@@ -435,7 +445,21 @@ export function CommunityForm({
 				</>
 			)}
 
-			{mode === "public" ? (
+			{mode === "correction" ? (
+				<label>
+					O que precisa ser corrigido?
+					<textarea
+						rows={3}
+						placeholder="Ex.: o horário da missa mudou, o endereço está incompleto..."
+						value={form.correction_note ?? ""}
+						onChange={(event) =>
+							update("correction_note", event.target.value)
+						}
+					/>
+				</label>
+			) : null}
+
+			{mode === "public" || mode === "correction" ? (
 				<TurnstileWidget
 					siteKey={turnstileSiteKey ?? ""}
 					onToken={setToken}
@@ -445,9 +469,11 @@ export function CommunityForm({
 			<button type="submit" disabled={busy}>
 				{busy
 					? "Enviando..."
-					: mode === "public"
-						? "Enviar para aprovação"
-						: "Salvar comunidade"}
+					: mode === "correction"
+						? "Enviar correção"
+						: mode === "public"
+							? "Enviar para aprovação"
+							: "Salvar comunidade"}
 			</button>
 		</form>
 	);

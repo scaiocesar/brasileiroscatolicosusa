@@ -69,6 +69,17 @@ export function adminSeo(): SeoDocument {
 	};
 }
 
+export function correctionSeo(community: Community): SeoDocument {
+	const path = `/comunidade/${community.slug}/corrigir`;
+	return {
+		title: `Corrigir ${community.name} | Brasileiros Católicos nos EUA`,
+		description: `Sugira uma correção nos dados de ${community.name} em ${community.city}, ${community.state}. A equipe revisa e, se aprovada, atualiza o mapa.`,
+		canonical: canonicalUrl(path),
+		robots: "noindex, follow",
+		jsonLd: graph([websiteNode(), organizationNode()]),
+	};
+}
+
 export function notFoundSeo(): SeoDocument {
 	return {
 		title: "Comunidade não encontrada | Brasileiros Católicos nos EUA",
@@ -105,6 +116,10 @@ export function seoForPath(
 	const path = pathname.replace(/\/+$/, "") || "/";
 	if (path === "/informe") return submitSeo();
 	if (path === "/admin" || path.startsWith("/admin/")) return adminSeo();
+	const correctionPath = path.match(/^\/comunidade\/([^/]+)\/corrigir$/);
+	if (correctionPath) {
+		return community ? correctionSeo(community) : notFoundSeo();
+	}
 	if (path.startsWith("/comunidade/")) {
 		return community ? communitySeo(community) : notFoundSeo();
 	}

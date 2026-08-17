@@ -1,14 +1,17 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { adminSeo } from "../../shared/seo";
-import type { Community, CommunityInput, CommunityStatus } from "../../shared/types";
+import type { Community, CommunityCorrection, CommunityInput, CommunityStatus } from "../../shared/types";
 import { usePageSeo } from "../usePageSeo";
 import {
+	adminApproveCorrection,
 	adminDelete,
 	adminImportCsv,
 	adminList,
+	adminListCorrections,
 	adminLogin,
 	adminLogout,
 	adminMe,
+	adminRejectCorrection,
 	adminSave,
 	adminSetStatus,
 	fetchConfig,
@@ -30,6 +33,37 @@ function statusLabel(status: CommunityStatus): string {
 	return "Rejeitada";
 }
 
+function proposedCommunity(correction: CommunityCorrection): Community {
+	const proposed = correction.proposed;
+	return {
+		id: correction.community_id,
+		slug: correction.community_slug,
+		name: proposed.name,
+		description: proposed.description ?? null,
+		address_line: proposed.address_line,
+		city: proposed.city,
+		state: proposed.state,
+		zip: proposed.zip ?? null,
+		lat: proposed.lat ?? 0,
+		lng: proposed.lng ?? 0,
+		website_url: proposed.website_url ?? null,
+		whatsapp: proposed.whatsapp ?? null,
+		instagram: proposed.instagram ?? null,
+		facebook: proposed.facebook ?? null,
+		email: proposed.email ?? null,
+		phone: proposed.phone ?? null,
+		status: "approved",
+		submitted_by_name: correction.submitted_by_name,
+		submitted_by_email: correction.submitted_by_email,
+		admin_notes: correction.note,
+		created_at: correction.created_at,
+		updated_at: correction.created_at,
+		approved_at: null,
+		mass_schedules: proposed.mass_schedules,
+		services: proposed.services,
+	};
+}
+
 export function AdminPage() {
 	usePageSeo(useMemo(() => adminSeo(), []));
 	const [authed, setAuthed] = useState<boolean | null>(null);
@@ -45,10 +79,16 @@ export function AdminPage() {
 	const [busy, setBusy] = useState(false);
 	const [importing, setImporting] = useState(false);
 	const [importResult, setImportResult] = useState<string | null>(null);
+	const [corrections, setCorrections] = useState<CommunityCorrection[]>([]);
+	const [reviewing, setReviewing] = useState<CommunityCorrection | null>(null);
 
 	async function load(nextFilter = filter) {
-		const list = await adminList(nextFilter || undefined);
+		const [list, pendingCorrections] = await Promise.all([
+			adminList(nextFilter || undefined),
+			adminListCorrections("pending"),
+		]);
 		setCommunities(list);
+		setCorrections(pendingCorrections);
 	}
 
 	useEffect(() => {
@@ -78,8 +118,16 @@ export function AdminPage() {
 		setBusy(true);
 		setError(null);
 		try {
-			await adminSave(input, editing && editing !== "new" ? editing.id : undefined);
-			setEditing(null);
+			if (reviewing) {
+				await adminApproveCorrection(reviewing.id, input);
+				setReviewing(null);
+			} else {
+				await adminSave(
+					input,
+					editing && editing !== "new" ? editing.id : undefined,
+				);
+				setEditing(null);
+			}
 			await load();
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Não foi possível salvar.");
@@ -180,7 +228,10 @@ export function AdminPage() {
 							/>
 							{importing ? "Importando..." : "Importar CSV"}
 						</label>
-						<button type="button" className="secondary" onClick={() => setEditing("new")}>
+						<button type="button" className="secondary" onClick={() => {
+							setReviewing(null);
+							setEditing("new");
+						}}>
 							Nova comunidade
 						</button>
 						<button
@@ -224,6 +275,102 @@ export function AdminPage() {
 
 				{error ? <p className="form-error">{error}</p> : null}
 				{importResult ? <p className="form-ok">{importResult}</p> : null}
+
+				{corrections.length > 0 ? (
+					<section className="editor-card">
+						<h2>Correções pendentes ({corrections.length})</h2>
+						<ul className="admin-list">
+							{corrections.map((correction) => (
+								<li key={correction.id}>
+									<div>
+										<strong>{correction.community_name}</strong>
+										<span>
+											Enviado por {correction.submitted_by_name} (
+											{correction.submitted_by_email})
+										</span>
+										{correction.note ? (
+											<small>{correction.note}</small>
+										) : null}
+									</div>
+									<div className="row-actions">
+										<button
+											type="button"
+											onClick={async () => {
+												try {
+													await adminApproveCorrection(correction.id);
+													await load();
+												} catch (err) {
+													setError(
+														err instanceof Error
+															? err.message
+															: "Não foi possível aplicar.",
+													);
+												}
+											}}
+										>
+											Aplicar
+										</button>
+										<button
+											type="button"
+											className="secondary"
+											onClick={() => {
+												setEditing(null);
+												setReviewing(correction);
+											}}
+										>
+											Revisar
+										</button>
+										<button
+											type="button"
+											className="ghost"
+											onClick={async () => {
+												try {
+													await adminRejectCorrection(correction.id);
+													if (reviewing?.id === correction.id) {
+														setReviewing(null);
+													}
+													await load();
+												} catch (err) {
+													setError(
+														err instanceof Error
+															? err.message
+															: "Não foi possível rejeitar.",
+													);
+												}
+											}}
+										>
+											Rejeitar
+										</button>
+									</div>
+								</li>
+							))}
+						</ul>
+					</section>
+				) : null}
+
+				{reviewing ? (
+					<section className="editor-card">
+						<h2>Revisar correção: {reviewing.community_name}</h2>
+						{reviewing.note ? (
+							<p className="hint">{reviewing.note}</p>
+						) : null}
+						<CommunityForm
+							key={`correction-${reviewing.id}`}
+							mode="admin"
+							initial={proposedCommunity(reviewing)}
+							busy={busy}
+							error={error}
+							onSubmit={handleSave}
+						/>
+						<button
+							type="button"
+							className="ghost"
+							onClick={() => setReviewing(null)}
+						>
+							Cancelar
+						</button>
+					</section>
+				) : null}
 
 				{editing ? (
 					<section className="editor-card">
@@ -285,7 +432,10 @@ export function AdminPage() {
 								<button
 									type="button"
 									className="secondary"
-									onClick={() => setEditing(community)}
+									onClick={() => {
+										setReviewing(null);
+										setEditing(community);
+									}}
 								>
 									Editar
 								</button>

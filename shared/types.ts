@@ -71,4 +71,19 @@ export type CommunityInput = {
 	mass_schedules: MassSchedule[];
 	services: CommunityService[];
 	turnstile_token?: string;
+	correction_note?: string | null;
+};
+
+export type CommunityCorrection = {
+	id: number;
+	community_id: number;
+	community_name: string;
+	community_slug: string;
+	proposed: CommunityInput;
+	note: string | null;
+	submitted_by_name: string;
+	submitted_by_email: string;
+	status: CommunityStatus;
+	created_at: string;
+	reviewed_at: string | null;
 };

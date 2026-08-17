@@ -321,6 +321,14 @@ textarea {
   border-bottom: 1px solid var(--line);
 }
 
+.panel-correct {
+  margin: 0.4rem 0 0;
+}
+
+.panel-correct a {
+  font-weight: 600;
+}
+
 .chip-list {
   display: flex;
   flex-wrap: wrap;

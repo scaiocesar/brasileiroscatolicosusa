@@ -34,6 +34,13 @@ import { applyHtmlSeo, withStatus } from "./seo";
 import { verifyTurnstile } from "./turnstile";
 import { csvRowsToInputs } from "../shared/csv";
 import {
+	createCorrection,
+	getCorrection,
+	listCorrections,
+	sanitizeProposed,
+	setCorrectionStatus,
+} from "./corrections";
+import {
 	buildIndexMarkdown,
 	buildInformeMarkdown,
 	buildLlmsFull,
@@ -139,6 +146,44 @@ app.get("/api/communities/:slug", async (c) => {
 	const community = await getCommunity(c.env.DB, c.req.param("slug"), false);
 	if (!community) return jsonPublic({ error: "Comunidade não encontrada." }, 404);
 	return jsonPublic({ community: toPublicCommunity(community) });
+});
+
+app.post("/api/communities/:slug/corrections", async (c) => {
+	const community = await getCommunity(c.env.DB, c.req.param("slug"), false);
+	if (!community) return c.json({ error: "Comunidade não encontrada." }, 404);
+
+	const input = (await c.req.json().catch(() => null)) as CommunityInput | null;
+	if (!input) return c.json({ error: "Dados inválidos." }, 400);
+
+	const valid = validateInput(input, { requireSubmitter: true });
+	if (valid) return c.json({ error: valid }, 400);
+
+	const human = await verifyTurnstile(
+		c.env.TURNSTILE_SECRET,
+		input.turnstile_token,
+		c.req.header("CF-Connecting-IP") ?? null,
+	);
+	if (!human) {
+		return c.json({ error: "Falha na verificação anti-spam. Tente novamente." }, 400);
+	}
+
+	const coords = await resolveCoordinates(input, geocodeAddress);
+	if (!coords) {
+		return c.json(
+			{
+				error:
+					"Não foi possível localizar o endereço. Arraste o pin no mapa para a posição correta.",
+			},
+			400,
+		);
+	}
+
+	const correction = await createCorrection(c.env.DB, community.id, {
+		...input,
+		lat: coords.lat,
+		lng: coords.lng,
+	});
+	return c.json({ ok: true, id: correction.id }, 201);
 });
 
 app.post("/api/geocode", async (c) => {
@@ -423,6 +468,59 @@ app.delete("/api/admin/communities/:id", async (c) => {
 	return c.json({ ok: true });
 });
 
+app.get("/api/admin/corrections", async (c) => {
+	if (!(await requireAdmin(c))) return c.json({ error: "Não autorizado." }, 401);
+	const status = c.req.query("status") as CommunityStatus | undefined;
+	const allowed: CommunityStatus[] = ["pending", "approved", "rejected"];
+	const filter = status && allowed.includes(status) ? status : undefined;
+	const corrections = await listCorrections(c.env.DB, filter);
+	return c.json({ corrections });
+});
+
+app.post("/api/admin/corrections/:id/approve", async (c) => {
+	if (!(await requireAdmin(c))) return c.json({ error: "Não autorizado." }, 401);
+	const current = await getCorrection(c.env.DB, Number(c.req.param("id")));
+	if (!current) return c.json({ error: "Correção não encontrada." }, 404);
+	if (current.status !== "pending") {
+		return c.json({ error: "Essa correção já foi revisada." }, 400);
+	}
+
+	const body = (await c.req.json().catch(() => null)) as CommunityInput | null;
+	const input = sanitizeProposed(body ?? current.proposed);
+	const valid = validateInput(input);
+	if (valid) return c.json({ error: valid }, 400);
+	const coords = await resolveCoordinates(input, geocodeAddress);
+	if (!coords) {
+		return c.json({ error: "Informe ou localise a posição no mapa." }, 400);
+	}
+
+	const existing = await getCommunity(c.env.DB, String(current.community_id), true);
+	if (!existing) return c.json({ error: "Comunidade não encontrada." }, 404);
+
+	const community = await updateCommunity(c.env.DB, existing.id, {
+		...input,
+		status: "approved",
+		submitted_by_name: existing.submitted_by_name,
+		submitted_by_email: existing.submitted_by_email,
+		admin_notes: existing.admin_notes,
+	}, coords);
+	if (!community) return c.json({ error: "Comunidade não encontrada." }, 404);
+
+	const correction = await setCorrectionStatus(c.env.DB, current.id, "approved");
+	return c.json({ community, correction });
+});
+
+app.post("/api/admin/corrections/:id/reject", async (c) => {
+	if (!(await requireAdmin(c))) return c.json({ error: "Não autorizado." }, 401);
+	const current = await getCorrection(c.env.DB, Number(c.req.param("id")));
+	if (!current) return c.json({ error: "Correção não encontrada." }, 404);
+	if (current.status !== "pending") {
+		return c.json({ error: "Essa correção já foi revisada." }, 400);
+	}
+	const correction = await setCorrectionStatus(c.env.DB, current.id, "rejected");
+	return c.json({ correction });
+});
+
 app.notFound(async (c) => {
 	if (c.req.path.startsWith("/api/")) {
 		return c.json({ error: "Não encontrado." }, 404);
@@ -438,6 +536,19 @@ async function servePublicPage(c: Context<{ Bindings: Env }>): Promise<Response>
 	const response = await c.env.ASSETS.fetch(c.req.raw);
 	const contentType = response.headers.get("content-type") ?? "";
 	if (!contentType.includes("text/html")) return response;
+
+	const correctMatch = url.pathname.match(/^\/comunidade\/([^/]+)\/corrigir\/?$/);
+	if (correctMatch) {
+		const community = await getCommunity(
+			c.env.DB,
+			decodeURIComponent(correctMatch[1]),
+		);
+		const rewritten = applyHtmlSeo(
+			response,
+			seoForPath(url.pathname, community),
+		);
+		return community ? rewritten : withStatus(rewritten, 404);
+	}
 
 	const match = url.pathname.match(/^\/comunidade\/([^/]+)\/?$/);
 	if (match) {

@@ -1,5 +1,6 @@
 import type {
 	Community,
+	CommunityCorrection,
 	CommunityInput,
 	CommunityStatus,
 	CommunitySummary,
@@ -57,6 +58,22 @@ export async function submitCommunity(
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify(input),
 	});
+	if (!response.ok) throw new Error(await parseError(response));
+	return response.json();
+}
+
+export async function submitCorrection(
+	slug: string,
+	input: CommunityInput,
+): Promise<{ ok: boolean; id: number }> {
+	const response = await fetch(
+		`/api/communities/${encodeURIComponent(slug)}/corrections`,
+		{
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(input),
+		},
+	);
 	if (!response.ok) throw new Error(await parseError(response));
 	return response.json();
 }
@@ -161,6 +178,41 @@ export async function adminSetStatus(
 export async function adminDelete(id: number): Promise<void> {
 	const response = await fetch(`/api/admin/communities/${id}`, {
 		method: "DELETE",
+		credentials: "include",
+	});
+	if (!response.ok) throw new Error(await parseError(response));
+}
+
+export async function adminListCorrections(
+	status?: CommunityStatus,
+): Promise<CommunityCorrection[]> {
+	const query = status ? `?status=${status}` : "";
+	const response = await fetch(`/api/admin/corrections${query}`, {
+		credentials: "include",
+	});
+	if (!response.ok) throw new Error(await parseError(response));
+	const data = (await response.json()) as {
+		corrections: CommunityCorrection[];
+	};
+	return data.corrections;
+}
+
+export async function adminApproveCorrection(
+	id: number,
+	input?: CommunityInput,
+): Promise<void> {
+	const response = await fetch(`/api/admin/corrections/${id}/approve`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		credentials: "include",
+		body: JSON.stringify(input ?? null),
+	});
+	if (!response.ok) throw new Error(await parseError(response));
+}
+
+export async function adminRejectCorrection(id: number): Promise<void> {
+	const response = await fetch(`/api/admin/corrections/${id}/reject`, {
+		method: "POST",
 		credentials: "include",
 	});
 	if (!response.ok) throw new Error(await parseError(response));
