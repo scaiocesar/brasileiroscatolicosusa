@@ -1,5 +1,5 @@
 {
-  "name": "brasileiroscatolicoseua",
+  "name": "brasileiroscatolicosusa",
   "engines": {
     "node": ">=22"
   },
@@ -12,8 +12,8 @@
     "preview": "npm run build && vite preview",
     "deploy": "npm run build && wrangler deploy",
     "cf-typegen": "wrangler types",
-    "db:migrate:local": "wrangler d1 migrations apply brasileiroscatolicoseua --local",
-    "db:migrate:remote": "wrangler d1 migrations apply brasileiroscatolicoseua --remote"
+    "db:migrate:local": "wrangler d1 migrations apply brasileiroscatolicosusa --local",
+    "db:migrate:remote": "wrangler d1 migrations apply brasileiroscatolicosusa --remote"
   },
   "dependencies": {
     "hono": "^4.13.2",

@@ -27,7 +27,7 @@ O Turnstile de desenvolvimento usa as chaves de teste da Cloudflare (sempre apro
 2. Crie o banco D1 e copie o `database_id` para `wrangler.jsonc`:
 
 ```bash
-npx wrangler d1 create brasileiroscatolicoseua
+npx wrangler d1 create brasileiroscatolicosusa
 npm run db:migrate:remote
 ```
 
@@ -49,7 +49,7 @@ Crie um widget no [Cloudflare Turnstile](https://dash.cloudflare.com/?to=/:accou
 npm run deploy
 ```
 
-5. No dashboard da Cloudflare, abra o Worker `brasileiroscatolicoseua` → **Settings** → **Domains & Routes** → **Add** → **Custom Domain** e informe `brasileiroscatolicoseua.com` (e `www` se quiser). O domínio precisa estar na mesma conta Cloudflare, com o DNS apontando para a Cloudflare.
+5. No dashboard da Cloudflare, abra o Worker `brasileiroscatolicosusa` → **Settings** → **Domains & Routes** → **Add** → **Custom Domain** e informe `brasileiroscatolicoseua.com` (e `www` se quiser). O domínio precisa estar na mesma conta Cloudflare, com o DNS apontando para a Cloudflare.
 
 A publicação remota exige `npx wrangler login` no computador (abre o browser da conta Cloudflare). Sem isso, o app roda só em `npm run dev`.
 

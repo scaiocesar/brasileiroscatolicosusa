@@ -4,7 +4,7 @@
  */
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "brasileiroscatolicoseua",
+	"name": "brasileiroscatolicosusa",
 	"main": "worker/index.ts",
 	"compatibility_date": "2026-08-17",
 	"compatibility_flags": ["nodejs_compat"],
@@ -22,9 +22,8 @@
 	"d1_databases": [
 		{
 			"binding": "DB",
-			"database_name": "brasileiroscatolicoseua",
-			// Replace after `wrangler d1 create brasileiroscatolicoseua`
-			"database_id": "local-dev-placeholder",
+			"database_name": "brasileiroscatolicosusa",
+			"database_id": "41dd3e89-698b-46ea-96df-43d764f1211a",
 			"migrations_dir": "migrations",
 		},
 	],
