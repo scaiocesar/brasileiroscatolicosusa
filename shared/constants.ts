@@ -85,11 +85,3 @@ export const US_STATES = [
 ] as const;
 
 export const US_CENTER: [number, number] = [39.8283, -98.5795];
-export const US_BOUNDS: [[number, number], [number, number]] = [
-	[24.396308, -124.848974],
-	[49.384358, -66.885444],
-];
-export const US_MAX_BOUNDS: [[number, number], [number, number]] = [
-	[22.5, -127.8],
-	[50.8, -64.2],
-];
