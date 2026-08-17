@@ -16,7 +16,8 @@ npm run dev
 
 - Site: [http://localhost:5173](http://localhost:5173)
 - Admin: [http://localhost:5173/admin](http://localhost:5173/admin)
-- Senha local padrão: `admin` (definida em `.dev.vars`)
+- Usuário local: `caio`
+- Senha local: veja `.dev.vars` (`ADMIN_PASSWORD`)
 
 O Turnstile de desenvolvimento usa as chaves de teste da Cloudflare (sempre aprovam).
 
@@ -33,6 +34,7 @@ npm run db:migrate:remote
 3. Configure os secrets de produção:
 
 ```bash
+npx wrangler secret put ADMIN_USERNAME
 npx wrangler secret put ADMIN_PASSWORD
 npx wrangler secret put AUTH_SECRET
 npx wrangler secret put TURNSTILE_SECRET

@@ -61,12 +61,20 @@ export async function submitCommunity(
 	return response.json();
 }
 
-export async function adminLogin(password: string): Promise<void> {
+export async function adminLogin(
+	username: string,
+	password: string,
+	turnstileToken?: string,
+): Promise<void> {
 	const response = await fetch("/api/admin/login", {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
 		credentials: "include",
-		body: JSON.stringify({ password }),
+		body: JSON.stringify({
+			username,
+			password,
+			turnstile_token: turnstileToken,
+		}),
 	});
 	if (!response.ok) throw new Error(await parseError(response));
 }

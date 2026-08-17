@@ -1,5 +1,7 @@
 const COOKIE = "bceua_admin";
-const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+const SESSION_MS = 12 * 60 * 60 * 1000;
+const MAX_FAILURES = 5;
+const LOCKOUT_MS = 15 * 60 * 1000;
 
 function timingSafeEqual(a: string, b: string): boolean {
 	const encoder = new TextEncoder();
@@ -30,8 +32,22 @@ async function hmac(secret: string, value: string): Promise<string> {
 		.replace(/=+$/g, "");
 }
 
-export async function createSessionToken(secret: string): Promise<string> {
-	const payload = `admin:${Date.now() + WEEK_MS}`;
+export async function secretsMatch(
+	secret: string,
+	provided: string,
+	expected: string,
+): Promise<boolean> {
+	const left = await hmac(secret, provided.normalize("NFC"));
+	const right = await hmac(secret, expected.normalize("NFC"));
+	return timingSafeEqual(left, right);
+}
+
+export async function createSessionToken(
+	secret: string,
+	username: string,
+): Promise<string> {
+	const nonce = crypto.randomUUID();
+	const payload = `v2:${username}:${Date.now() + SESSION_MS}:${nonce}`;
 	const signature = await hmac(secret, payload);
 	return `${payload}.${signature}`;
 }
@@ -47,8 +63,9 @@ export async function isValidSession(
 	const signature = token.slice(lastDot + 1);
 	const expected = await hmac(secret, payload);
 	if (!timingSafeEqual(signature, expected)) return false;
-	const [, expiry] = payload.split(":");
-	const expiresAt = Number(expiry);
+	const parts = payload.split(":");
+	if (parts[0] !== "v2" || parts.length < 4) return false;
+	const expiresAt = Number(parts[2]);
 	return Number.isFinite(expiresAt) && expiresAt > Date.now();
 }
 
@@ -57,8 +74,8 @@ export function sessionCookie(token: string, secure: boolean): string {
 		`${COOKIE}=${token}`,
 		"Path=/",
 		"HttpOnly",
-		"SameSite=Lax",
-		`Max-Age=${Math.floor(WEEK_MS / 1000)}`,
+		"SameSite=Strict",
+		`Max-Age=${Math.floor(SESSION_MS / 1000)}`,
 	];
 	if (secure) parts.push("Secure");
 	return parts.join("; ");
@@ -69,7 +86,7 @@ export function clearSessionCookie(secure: boolean): string {
 		`${COOKIE}=`,
 		"Path=/",
 		"HttpOnly",
-		"SameSite=Lax",
+		"SameSite=Strict",
 		"Max-Age=0",
 	];
 	if (secure) parts.push("Secure");
@@ -88,10 +105,83 @@ export function readCookie(
 	return undefined;
 }
 
-export function passwordsMatch(
-	provided: string,
-	expected: string | undefined,
-): boolean {
-	if (!expected) return false;
-	return timingSafeEqual(provided, expected);
+type AttemptRow = {
+	failures: number;
+	locked_until: string | null;
+};
+
+export async function getLockout(
+	db: D1Database,
+	ip: string,
+): Promise<{ locked: boolean; retryAfterSec: number }> {
+	const row = await db
+		.prepare("SELECT failures, locked_until FROM login_attempts WHERE ip = ?")
+		.bind(ip)
+		.first<AttemptRow>();
+	if (!row?.locked_until) return { locked: false, retryAfterSec: 0 };
+	const until = Date.parse(row.locked_until);
+	if (!Number.isFinite(until) || until <= Date.now()) {
+		return { locked: false, retryAfterSec: 0 };
+	}
+	return {
+		locked: true,
+		retryAfterSec: Math.ceil((until - Date.now()) / 1000),
+	};
+}
+
+export async function recordLoginFailure(
+	db: D1Database,
+	ip: string,
+): Promise<void> {
+	const now = new Date().toISOString();
+	const row = await db
+		.prepare("SELECT failures, locked_until FROM login_attempts WHERE ip = ?")
+		.bind(ip)
+		.first<AttemptRow>();
+	const previous = row?.failures ?? 0;
+	const stillLocked =
+		row?.locked_until && Date.parse(row.locked_until) > Date.now();
+	const failures = stillLocked ? previous + 1 : previous >= MAX_FAILURES ? 1 : previous + 1;
+	const lockedUntil =
+		failures >= MAX_FAILURES
+			? new Date(Date.now() + LOCKOUT_MS).toISOString()
+			: null;
+	await db
+		.prepare(
+			`INSERT INTO login_attempts (ip, failures, last_attempt_at, locked_until)
+       VALUES (?, ?, ?, ?)
+       ON CONFLICT(ip) DO UPDATE SET
+         failures = excluded.failures,
+         last_attempt_at = excluded.last_attempt_at,
+         locked_until = excluded.locked_until`,
+		)
+		.bind(ip, failures, now, lockedUntil)
+		.run();
+}
+
+export async function recordLoginSuccess(
+	db: D1Database,
+	ip: string,
+): Promise<void> {
+	await db.prepare("DELETE FROM login_attempts WHERE ip = ?").bind(ip).run();
+}
+
+export function clientIp(request: Request): string {
+	return (
+		request.headers.get("CF-Connecting-IP") ||
+		request.headers.get("X-Forwarded-For")?.split(",")[0]?.trim() ||
+		"local"
+	);
+}
+
+export function isSameOrigin(request: Request): boolean {
+	const origin = request.headers.get("Origin");
+	if (!origin) return request.method === "GET" || request.method === "HEAD";
+	return origin === new URL(request.url).origin;
+}
+
+export function isJsonRequest(request: Request): boolean {
+	return (request.headers.get("Content-Type") ?? "")
+		.toLowerCase()
+		.includes("application/json");
 }

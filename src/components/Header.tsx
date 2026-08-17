@@ -15,7 +15,6 @@ export function Header() {
 					Mapa
 				</NavLink>
 				<NavLink to="/informe">Informe sua comunidade</NavLink>
-				<NavLink to="/admin">Admin</NavLink>
 			</nav>
 		</header>
 	);

@@ -3,10 +3,16 @@ import type { Context } from "hono";
 import type { CommunityInput, CommunityStatus } from "../shared/types";
 import {
 	clearSessionCookie,
+	clientIp,
 	createSessionToken,
+	getLockout,
+	isJsonRequest,
+	isSameOrigin,
 	isValidSession,
-	passwordsMatch,
 	readCookie,
+	recordLoginFailure,
+	recordLoginSuccess,
+	secretsMatch,
 	sessionCookie,
 } from "./auth";
 import {
@@ -30,6 +36,7 @@ function isSecureRequest(request: Request): boolean {
 }
 
 async function requireAdmin(c: Context<{ Bindings: Env }>): Promise<boolean> {
+	if (!isSameOrigin(c.req.raw) && c.req.method !== "GET") return false;
 	const token = readCookie(c.req.raw.headers.get("Cookie"));
 	return isValidSession(c.env.AUTH_SECRET, token);
 }
@@ -110,16 +117,59 @@ app.post("/api/submissions", async (c) => {
 });
 
 app.post("/api/admin/login", async (c) => {
-	if (!c.env.ADMIN_PASSWORD || !c.env.AUTH_SECRET) {
+	if (!isSameOrigin(c.req.raw) || !isJsonRequest(c.req.raw)) {
+		return c.json({ error: "Não autorizado." }, 403);
+	}
+	if (!c.env.ADMIN_USERNAME || !c.env.ADMIN_PASSWORD || !c.env.AUTH_SECRET) {
 		return c.json({ error: "Administração ainda não configurada." }, 500);
 	}
-	const body = (await c.req.json().catch(() => null)) as {
-		password?: string;
-	} | null;
-	if (!passwordsMatch(body?.password ?? "", c.env.ADMIN_PASSWORD)) {
-		return c.json({ error: "Senha incorreta." }, 401);
+
+	const ip = clientIp(c.req.raw);
+	const lockout = await getLockout(c.env.DB, ip);
+	if (lockout.locked) {
+		return c.json(
+			{ error: "Muitas tentativas. Tente novamente em alguns minutos." },
+			{
+				status: 429,
+				headers: { "Retry-After": String(lockout.retryAfterSec) },
+			},
+		);
 	}
-	const token = await createSessionToken(c.env.AUTH_SECRET);
+
+	const body = (await c.req.json().catch(() => null)) as {
+		username?: string;
+		password?: string;
+		turnstile_token?: string;
+	} | null;
+
+	const human = await verifyTurnstile(
+		c.env.TURNSTILE_SECRET,
+		body?.turnstile_token,
+		c.req.header("CF-Connecting-IP") ?? null,
+	);
+	if (!human) {
+		await recordLoginFailure(c.env.DB, ip);
+		return c.json({ error: "Falha na verificação anti-spam. Tente novamente." }, 400);
+	}
+
+	const usernameOk = await secretsMatch(
+		c.env.AUTH_SECRET,
+		body?.username?.trim() ?? "",
+		c.env.ADMIN_USERNAME,
+	);
+	const passwordOk = await secretsMatch(
+		c.env.AUTH_SECRET,
+		body?.password ?? "",
+		c.env.ADMIN_PASSWORD,
+	);
+
+	if (!usernameOk || !passwordOk) {
+		await recordLoginFailure(c.env.DB, ip);
+		return c.json({ error: "Usuário ou senha inválidos." }, 401);
+	}
+
+	await recordLoginSuccess(c.env.DB, ip);
+	const token = await createSessionToken(c.env.AUTH_SECRET, c.env.ADMIN_USERNAME);
 	return c.json(
 		{ ok: true },
 		{

@@ -8,9 +8,11 @@ import {
 	adminMe,
 	adminSave,
 	adminSetStatus,
+	fetchConfig,
 } from "../api";
 import { CommunityForm } from "../components/CommunityForm";
 import { Header } from "../components/Header";
+import { TurnstileWidget } from "../components/TurnstileWidget";
 
 const FILTERS: Array<{ id: "" | CommunityStatus; label: string }> = [
 	{ id: "", label: "Todas" },
@@ -27,7 +29,10 @@ function statusLabel(status: CommunityStatus): string {
 
 export function AdminPage() {
 	const [authed, setAuthed] = useState<boolean | null>(null);
+	const [username, setUsername] = useState("");
 	const [password, setPassword] = useState("");
+	const [turnstileToken, setTurnstileToken] = useState("");
+	const [siteKey, setSiteKey] = useState("");
 	const [loginError, setLoginError] = useState<string | null>(null);
 	const [communities, setCommunities] = useState<Community[]>([]);
 	const [filter, setFilter] = useState<"" | CommunityStatus>("pending");
@@ -41,6 +46,7 @@ export function AdminPage() {
 	}
 
 	useEffect(() => {
+		fetchConfig().then((config) => setSiteKey(config.turnstileSiteKey));
 		adminMe()
 			.then(async (ok) => {
 				setAuthed(ok);
@@ -53,7 +59,8 @@ export function AdminPage() {
 		event.preventDefault();
 		setLoginError(null);
 		try {
-			await adminLogin(password);
+			await adminLogin(username, password, turnstileToken);
+			setPassword("");
 			setAuthed(true);
 			await load();
 		} catch (err) {
@@ -96,14 +103,25 @@ export function AdminPage() {
 					<form className="community-form" onSubmit={handleLogin}>
 						{loginError ? <p className="form-error">{loginError}</p> : null}
 						<label>
+							Usuário
+							<input
+								autoComplete="username"
+								value={username}
+								onChange={(event) => setUsername(event.target.value)}
+								required
+							/>
+						</label>
+						<label>
 							Senha
 							<input
 								type="password"
+								autoComplete="current-password"
 								value={password}
 								onChange={(event) => setPassword(event.target.value)}
 								required
 							/>
 						</label>
+						<TurnstileWidget siteKey={siteKey} onToken={setTurnstileToken} />
 						<button type="submit">Entrar</button>
 					</form>
 				</main>
