@@ -18,6 +18,14 @@ export function usePageSeo(seo: SeoDocument) {
 		for (const link of document.querySelectorAll('link[rel="alternate"][hreflang]')) {
 			link.setAttribute("href", seo.canonical);
 		}
+		const markdown = document.querySelector(
+			'link[rel="alternate"][type="text/markdown"]',
+		);
+		if (seo.markdown) {
+			markdown?.setAttribute("href", seo.markdown);
+		} else {
+			markdown?.remove();
+		}
 
 		const jsonLd = document.getElementById("json-ld-page");
 		if (jsonLd) jsonLd.textContent = safeJsonLd(seo.jsonLd);

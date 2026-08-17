@@ -1,8 +1,7 @@
-import type { SeoDocument } from "../shared/seo";
-import { safeJsonLd } from "../shared/seo";
+import { canonicalUrl, safeJsonLd, type SeoDocument } from "../shared/seo";
 
 export function applyHtmlSeo(response: Response, seo: SeoDocument): Response {
-	return new HTMLRewriter()
+	const rewritten = new HTMLRewriter()
 		.on("title", {
 			element(el) {
 				el.setInnerContent(seo.title);
@@ -23,9 +22,15 @@ export function applyHtmlSeo(response: Response, seo: SeoDocument): Response {
 				el.setAttribute("href", seo.canonical);
 			},
 		})
-		.on('link[rel="alternate"]', {
+		.on('link[rel="alternate"][hreflang]', {
 			element(el) {
 				el.setAttribute("href", seo.canonical);
+			},
+		})
+		.on('link[rel="alternate"][type="text/markdown"]', {
+			element(el) {
+				if (seo.markdown) el.setAttribute("href", seo.markdown);
+				else el.remove();
 			},
 		})
 		.on('meta[property="og:title"]', {
@@ -59,6 +64,20 @@ export function applyHtmlSeo(response: Response, seo: SeoDocument): Response {
 			},
 		})
 		.transform(response);
+
+	const headers = new Headers(rewritten.headers);
+	headers.append("Link", `<${canonicalUrl("/llms.txt")}>; rel="describedby"`);
+	if (seo.markdown) {
+		headers.append(
+			"Link",
+			`<${seo.markdown}>; rel="alternate"; type="text/markdown"`,
+		);
+	}
+	return new Response(rewritten.body, {
+		status: rewritten.status,
+		statusText: rewritten.statusText,
+		headers,
+	});
 }
 
 export function withStatus(response: Response, status: number): Response {

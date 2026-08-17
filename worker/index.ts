@@ -21,6 +21,7 @@ import {
 	findDuplicateCommunity,
 	getCommunity,
 	listAdminCommunities,
+	listApprovedDetailed,
 	listApprovedSitemap,
 	listSummaries,
 	resolveCoordinates,
@@ -32,7 +33,18 @@ import { formatGeocodeQuery, geocodeAddress } from "./geocode";
 import { applyHtmlSeo, withStatus } from "./seo";
 import { verifyTurnstile } from "./turnstile";
 import { csvRowsToInputs } from "../shared/csv";
+import {
+	buildIndexMarkdown,
+	buildInformeMarkdown,
+	buildLlmsFull,
+	buildLlmsTxt,
+	communityMarkdown,
+	filterSummaries,
+	openApiSpec,
+	toPublicCommunity,
+} from "../shared/llms";
 import { buildSitemapXml, seoForPath } from "../shared/seo";
+import { isPublicAiPath, jsonPublic, markdownResponse, wantsMarkdown } from "./ai";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -58,15 +70,54 @@ app.use("*", async (c, next) => {
 	await next();
 });
 
+app.use("*", async (c, next) => {
+	if (c.req.method === "OPTIONS" && isPublicAiPath(c.req.path)) {
+		return new Response(null, {
+			status: 204,
+			headers: {
+				"Access-Control-Allow-Origin": "*",
+				"Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+				"Access-Control-Max-Age": "86400",
+			},
+		});
+	}
+	await next();
+});
+
 app.get("/sitemap.xml", async (c) => {
 	const communities = await listApprovedSitemap(c.env.DB);
 	return new Response(buildSitemapXml(communities), {
 		headers: {
 			"Content-Type": "application/xml; charset=utf-8",
 			"Cache-Control": "public, max-age=3600",
+			"Access-Control-Allow-Origin": "*",
 		},
 	});
 });
+
+app.get("/llms.txt", async (c) => {
+	const communities = await listSummaries(c.env.DB, "approved");
+	return markdownResponse(buildLlmsTxt(communities), { plain: true });
+});
+
+app.get("/llms-full.txt", async (c) => {
+	const communities = await listApprovedDetailed(c.env.DB);
+	return markdownResponse(
+		buildLlmsFull(communities.map(toPublicCommunity)),
+		{ plain: true },
+	);
+});
+
+app.get("/index.md", async (c) => {
+	const communities = await listSummaries(c.env.DB, "approved");
+	return markdownResponse(buildIndexMarkdown(communities), { path: "/" });
+});
+
+app.get("/informe.md", () => {
+	return markdownResponse(buildInformeMarkdown(), { path: "/informe" });
+});
+
+app.get("/openapi.json", () => jsonPublic(openApiSpec()));
 
 app.get("/api/config", (c) => {
 	return c.json({
@@ -75,14 +126,19 @@ app.get("/api/config", (c) => {
 });
 
 app.get("/api/communities", async (c) => {
-	const communities = await listSummaries(c.env.DB, "approved");
-	return c.json({ communities });
+	const communities = filterSummaries(await listSummaries(c.env.DB, "approved"), {
+		state: c.req.query("state"),
+		city: c.req.query("city"),
+		q: c.req.query("q"),
+		service: c.req.query("service"),
+	});
+	return jsonPublic({ communities });
 });
 
 app.get("/api/communities/:slug", async (c) => {
 	const community = await getCommunity(c.env.DB, c.req.param("slug"), false);
-	if (!community) return c.json({ error: "Comunidade não encontrada." }, 404);
-	return c.json({ community });
+	if (!community) return jsonPublic({ error: "Comunidade não encontrada." }, 404);
+	return jsonPublic({ community: toPublicCommunity(community) });
 });
 
 app.post("/api/geocode", async (c) => {
@@ -375,19 +431,61 @@ app.notFound(async (c) => {
 });
 
 async function servePublicPage(c: Context<{ Bindings: Env }>): Promise<Response> {
+	const url = new URL(c.req.url);
+	const markdownPage = await serveMarkdownPage(c, url);
+	if (markdownPage) return markdownPage;
+
 	const response = await c.env.ASSETS.fetch(c.req.raw);
 	const contentType = response.headers.get("content-type") ?? "";
 	if (!contentType.includes("text/html")) return response;
 
-	const url = new URL(c.req.url);
 	const match = url.pathname.match(/^\/comunidade\/([^/]+)\/?$/);
 	if (match) {
 		const community = await getCommunity(c.env.DB, decodeURIComponent(match[1]));
+		if (wantsMarkdown(c.req.raw) && community) {
+			return markdownResponse(communityMarkdown(toPublicCommunity(community)), {
+				path: `/comunidade/${community.slug}`,
+			});
+		}
 		const rewritten = applyHtmlSeo(response, seoForPath(url.pathname, community));
 		return community ? rewritten : withStatus(rewritten, 404);
 	}
 
+	if (wantsMarkdown(c.req.raw)) {
+		const path = url.pathname.replace(/\/+$/, "") || "/";
+		if (path === "/") {
+			const communities = await listSummaries(c.env.DB, "approved");
+			return markdownResponse(buildIndexMarkdown(communities), { path: "/" });
+		}
+		if (path === "/informe") {
+			return markdownResponse(buildInformeMarkdown(), { path: "/informe" });
+		}
+	}
+
 	return applyHtmlSeo(response, seoForPath(url.pathname));
+}
+
+async function serveMarkdownPage(
+	c: Context<{ Bindings: Env }>,
+	url: URL,
+): Promise<Response | null> {
+	const communityMd = url.pathname.match(/^\/comunidade\/([^/]+)\.md$/);
+	if (communityMd) {
+		const community = await getCommunity(
+			c.env.DB,
+			decodeURIComponent(communityMd[1]),
+		);
+		if (!community) {
+			return markdownResponse("Comunidade não encontrada.\n", {
+				plain: true,
+				status: 404,
+			});
+		}
+		return markdownResponse(communityMarkdown(toPublicCommunity(community)), {
+			path: `/comunidade/${community.slug}`,
+		});
+	}
+	return null;
 }
 
 export default app;

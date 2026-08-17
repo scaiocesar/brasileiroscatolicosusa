@@ -1,7 +1,8 @@
 import { useEffect } from "react";
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from "react-leaflet";
-import { US_BOUNDS, US_CENTER } from "../../shared/constants";
+import { US_CENTER, US_MAX_BOUNDS } from "../../shared/constants";
 import { pinIcon } from "./pinIcon";
+import { RestrictToUnitedStates } from "./RestrictToUnitedStates";
 import "leaflet/dist/leaflet.css";
 
 function ClickToPlace({
@@ -55,15 +56,21 @@ export function PinPickerMap({
 		<div className="pin-picker">
 			<MapContainer
 				center={position}
-				zoom={lat && lng ? 13 : 4}
+				zoom={lat && lng ? 13 : 5}
+				minZoom={4}
 				className="pin-picker-map"
 				scrollWheelZoom
-				maxBounds={US_BOUNDS}
+				maxBounds={US_MAX_BOUNDS}
+				maxBoundsViscosity={1}
+				worldCopyJump={false}
 			>
 				<TileLayer
 					attribution="&copy; OpenStreetMap &copy; CARTO"
 					url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+					bounds={US_MAX_BOUNDS}
+					noWrap
 				/>
+				<RestrictToUnitedStates fitOnLoad={!lat || !lng} />
 				<ClickToPlace onChange={onChange} />
 				<Recenter lat={position[0]} lng={position[1]} token={focusToken} />
 				<Marker

@@ -136,6 +136,15 @@ function normalizeName(value) {
 		.trim();
 }
 
+function churchKey(value) {
+	return normalizeName(value)
+		.replace(/\bst\b/g, "saint")
+		.replace(/\bste\b/g, "saint")
+		.replace(/\b(paroquia|parish|church|igreja|shrine|comunidade|catolica|brasileira)\b/g, "")
+		.replace(/\s+/g, " ")
+		.trim();
+}
+
 function csvEscape(value) {
 	const text = value ?? "";
 	if (/[",\n\r]/.test(text)) return `"${text.replaceAll('"', '""')}"`;
@@ -286,14 +295,15 @@ async function reverseGeocode(lat, lng) {
 		STATE_NAME_TO_CODE[String(address.state ?? "").toLowerCase()] ||
 		(address["ISO3166-2-lvl4"] || "").split("-")[1] ||
 		"";
-	const city =
+	const city = (
 		address.city ||
 		address.town ||
 		address.village ||
 		address.hamlet ||
 		address.suburb ||
 		address.municipality ||
-		(address.county || "").replace(/\s+County$/i, "");
+		(address.county || "").replace(/\s+County$/i, "")
+	).replace(/^(city of|village of)\s+/i, "");
 	const street = [address.house_number, address.road].filter(Boolean).join(" ");
 	return {
 		address_line: street || data.name || city,
@@ -308,100 +318,107 @@ function extractCommunityLinks(html) {
 }
 
 function parseMaCommunity(html, url) {
-	const title =
-		html.match(/<h2[^>]*>\s*([^<]+)\s*<\/h2>/)?.[1]?.trim() ||
-		html.match(/<title>([^<]+)/)?.[1]?.split("–")[0].trim() ||
-		"";
-	const text = stripTags(
-		html.match(/<article[\s\S]*?<\/article>/)?.[0] ||
-			html.match(/entry-content[\s\S]*?<\/div>/)?.[0] ||
-			html,
-	);
-	const addressMatch =
-		text.match(
-			/(\d{1,5}\s+[^\n,]+),\s*([A-Za-z .']+),\s*([A-Za-z]{2})\s+(\d{5})/,
-		) ||
-		text.match(
-			/(\d{1,5}\s+[^\n]+?)[-–]\s*([A-Za-z .']+?)[-–]\s*([A-Za-z]{2})[-–]\s*(\d{5})/,
-		);
-	const phone =
-		text.match(/\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/)?.[0] || "";
-	const email = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] || "";
-	const website =
-		text.match(/https?:\/\/[^\s]+/i)?.[0]?.replace(/[.,]$/, "") || "";
-	const schedules = [];
-	const portugueseBlock = text.match(
-		/Portuguese[^\n]*\n([^\n]+)/i,
-	)?.[1];
-	if (portugueseBlock) {
-		for (const part of portugueseBlock.split(/[/,;]/)) {
-			const dayMatch = part.match(
-				/(Sun|Mon|Tue|Wed|Thu|Fri|Sat|Sunday|Saturday|Wednesday|Wed)/i,
-			);
-			const time = parseTime(part);
-			const day = dayMatch
-				? parseDay(
-						{
-							sun: "sunday",
-							sunday: "sunday",
-							mon: "monday",
-							tue: "tuesday",
-							wed: "wednesday",
-							wednesday: "wednesday",
-							thu: "thursday",
-							fri: "friday",
-							sat: "saturday",
-							saturday: "saturday",
-						}[dayMatch[1].slice(0, 3).toLowerCase()] || dayMatch[1],
-					)
-				: 0;
-			if (time && day != null) {
-				schedules.push({
-					day_of_week: day,
-					time,
-					language: "pt",
-					notes: "Horário em português (página da comunidade)",
-				});
-			}
-		}
+	const h1 = decodeHtml(html.match(/<h1[^>]*>([^<]+)<\/h1>/)?.[1] || "")
+		.replace(/&#8211;.*/, "")
+		.trim();
+	const church =
+		[...html.matchAll(/class="elementor-heading-title[^"]*"[^>]*>([^<]+)/g)]
+			.map((item) => decodeHtml(item[1]).trim())
+			.find(
+				(title) =>
+					title &&
+					!/posts recentes|coment[aá]rios|cnbb|created by|all right reserved|pol[ií]tica|sacerdote respons/i.test(
+						title,
+					),
+			) || "";
+	const listTexts = [
+		...html.matchAll(/class="elementor-icon-list-text"[^>]*>([^<]+)/g),
+	].map((item) => decodeHtml(item[1]).trim());
+
+	let address = null;
+	let phone = "";
+	let email = "";
+	let website = "";
+	for (const text of listTexts) {
+		if (!address) address = parseUsAddress(text);
+		if (!email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text)) email = text;
+		if (!phone && /\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/.test(text)) phone = text;
+		if (!website && /^https?:\/\//i.test(text)) website = text;
 	}
+
 	return {
 		url,
-		name: decodeHtml(title),
-		address: addressMatch
-			? {
-					address_line: addressMatch[1].replace(/[-–]\s*$/, "").trim(),
-					city: addressMatch[2].trim(),
-					state: addressMatch[3].toUpperCase(),
-					zip: addressMatch[4],
-				}
-			: null,
+		name: church || h1,
+		communityLabel: h1,
+		address,
 		phone,
 		email,
 		website: website.includes("apostoladobrasileiro.com") ? "" : website,
-		schedules,
-		text,
+		schedules: [],
 	};
+}
+
+function findMaPage(maPages, title, city) {
+	const left = churchKey(title);
+	const matches = maPages.filter((page) => {
+		const right = churchKey(page.name);
+		if (!left || !right) return false;
+		return left === right || left.includes(right) || right.includes(left);
+	});
+	if (matches.length === 0) return null;
+	if (city) {
+		const byCity = matches.find(
+			(page) =>
+				normalizeName(page.address?.city || "") === normalizeName(city),
+		);
+		if (byCity) return byCity;
+	}
+	return matches.length === 1 ? matches[0] : null;
 }
 
 function mergePrefer(base, extra) {
 	if (!extra) return base;
-	if (!base.address_line && extra.address?.address_line) {
-		base.address_line = extra.address.address_line;
-		base.city = extra.address.city || base.city;
-		base.state = extra.address.state || base.state;
-		base.zip = extra.address.zip || base.zip;
+	if (extra.address?.address_line) {
+		const extraHasNumber = /^\d/.test(extra.address.address_line);
+		const baseHasNumber = /^\d/.test(base.address_line || "");
+		if (!base.address_line || (extraHasNumber && !baseHasNumber)) {
+			base.address_line = extra.address.address_line;
+			base.city = extra.address.city || base.city;
+			base.state = extra.address.state || base.state;
+			base.zip = extra.address.zip || base.zip;
+		}
 	}
 	base.phone ||= extra.phone;
 	base.email ||= extra.email;
 	base.website_url ||= extra.website;
-	if ((!base.mass_schedules || base.mass_schedules.length === 0) && extra.schedules?.length) {
-		base.mass_schedules = extra.schedules;
+	if (
+		(!base.mass_schedules ||
+			base.mass_schedules === "[]" ||
+			(Array.isArray(base.mass_schedules) && base.mass_schedules.length === 0)) &&
+		extra.schedules?.length
+	) {
+		base.mass_schedules = Array.isArray(base.mass_schedules)
+			? extra.schedules
+			: JSON.stringify(extra.schedules);
 	}
 	return base;
 }
 
 async function main() {
+	console.log("Lendo as comunidades de Massachusetts (Onde estamos)...");
+	const whereHtml = await fetchText(WHERE);
+	const maPages = [];
+	for (const url of extractCommunityLinks(whereHtml)) {
+		try {
+			const html = await fetchText(url);
+			maPages.push(parseMaCommunity(html, url));
+			console.log(`  MA: ${maPages.at(-1).name || url}`);
+			await sleep(350);
+		} catch (error) {
+			console.warn(`  falha MA ${url}: ${error.message}`);
+		}
+	}
+
 	console.log("Lendo o mapa público do Apostolado Brasileiro...");
 	const listingHtml = await fetchText(LISTING);
 	const makers = parseMakers(listingHtml).filter(
@@ -434,16 +451,22 @@ async function main() {
 		}
 
 		let parsed = details.address ? parseUsAddress(details.address) : null;
+		let extra = findMaPage(maPages, decodeHtml(maker.title), parsed?.city);
+		if (!parsed && extra?.address) parsed = extra.address;
 		if (!parsed && maker.latitude && maker.longitude) {
 			await sleep(1100);
 			parsed = await reverseGeocode(maker.latitude, maker.longitude);
 			if (parsed) {
-				console.log(`  endereço via mapa: ${parsed.address_line}, ${parsed.city} ${parsed.state}`);
+				console.log(
+					`  endereço via mapa: ${parsed.address_line}, ${parsed.city} ${parsed.state}`,
+				);
 			}
 		}
+		extra =
+			findMaPage(maPages, decodeHtml(maker.title), parsed?.city) || extra;
 
 		const contact = contactFromValue(details.phone);
-		rows.push({
+		const row = {
 			name: decodeHtml(maker.title),
 			description:
 				"Comunidade católica com missa em português listada pelo Apostolado Brasileiro.",
@@ -464,41 +487,25 @@ async function main() {
 			source_url: maker.link,
 			admin_notes:
 				"Importado do diretório público do Apostolado Brasileiro. Conferir endereço e horários antes de aprovar.",
-		});
+		};
+		mergePrefer(row, extra);
+		rows.push(row);
 	}
 
-	console.log("Lendo as comunidades de Massachusetts (Onde estamos)...");
-	const whereHtml = await fetchText(WHERE);
-	const maPages = [];
-	for (const url of extractCommunityLinks(whereHtml)) {
-		try {
-			const html = await fetchText(url);
-			maPages.push(parseMaCommunity(html, url));
-			console.log(`  MA: ${maPages.at(-1).name || url}`);
-			await sleep(350);
-		} catch (error) {
-			console.warn(`  falha MA ${url}: ${error.message}`);
-		}
-	}
-
-	for (const row of rows) {
-		const rowName = normalizeName(row.name);
-		const extra = maPages.find((page) => {
-			const pageName = normalizeName(page.name);
-			if (!pageName || pageName.length < 6) return false;
-			return rowName.includes(pageName) || pageName.includes(rowName);
-		});
-		if (extra) mergePrefer(row, extra);
-	}
-
-	const known = new Set(
-		rows.map((row) => `${normalizeName(row.name)}|${normalizeName(row.city)}`),
+	const known = new Set(rows.map((row) => churchKey(row.name)));
+	const knownAddresses = new Set(
+		rows.map(
+			(row) =>
+				`${normalizeName(row.address_line)}|${normalizeName(row.city)}|${row.state}`,
+		),
 	);
 	for (const page of maPages) {
-		if (!page.address) continue;
-		const key = `${normalizeName(page.name)}|${normalizeName(page.address.city)}`;
-		if (known.has(key)) continue;
+		if (!page.address || !page.name || /posts recentes|sacerdote respons|padre /i.test(page.name)) continue;
+		const key = churchKey(page.name);
+		const addressKey = `${normalizeName(page.address.address_line)}|${normalizeName(page.address.city)}|${page.address.state || "MA"}`;
+		if (!key || known.has(key) || knownAddresses.has(addressKey)) continue;
 		known.add(key);
+		knownAddresses.add(addressKey);
 		rows.push({
 			name: page.name || `Comunidade Católica Brasileira de ${page.address.city}`,
 			description:

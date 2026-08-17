@@ -219,6 +219,17 @@ export async function listApprovedSitemap(
 	return rows.results ?? [];
 }
 
+export async function listApprovedDetailed(
+	db: D1Database,
+): Promise<Community[]> {
+	const rows = await db
+		.prepare(
+			`SELECT * FROM communities WHERE status = 'approved' ORDER BY name`,
+		)
+		.all<CommunityRow>();
+	return attachRelated(db, rows.results ?? []);
+}
+
 export async function listSummaries(
 	db: D1Database,
 	status: CommunityStatus = "approved",

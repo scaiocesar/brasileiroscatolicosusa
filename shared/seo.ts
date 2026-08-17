@@ -17,11 +17,18 @@ export type SeoDocument = {
 	canonical: string;
 	robots: string;
 	jsonLd: unknown;
+	markdown?: string;
 };
 
 export function canonicalUrl(pathname: string): string {
 	const path = pathname.replace(/\/+$/, "") || "/";
 	return path === "/" ? `${SITE_ORIGIN}/` : `${SITE_ORIGIN}${path}`;
+}
+
+export function markdownUrl(pathname: string): string {
+	const path = pathname.replace(/\/+$/, "") || "/";
+	if (path === "/") return canonicalUrl("/index.md");
+	return canonicalUrl(`${path}.md`);
 }
 
 export function ogImageUrl(): string {
@@ -35,6 +42,7 @@ export function homeSeo(): SeoDocument {
 		canonical: canonicalUrl("/"),
 		robots: "index, follow",
 		jsonLd: graph([websiteNode(), organizationNode()]),
+		markdown: markdownUrl("/"),
 	};
 }
 
@@ -46,6 +54,7 @@ export function submitSeo(): SeoDocument {
 		canonical: canonicalUrl("/informe"),
 		robots: "index, follow",
 		jsonLd: graph([websiteNode(), organizationNode()]),
+		markdown: markdownUrl("/informe"),
 	};
 }
 
@@ -84,6 +93,7 @@ export function communitySeo(community: Community): SeoDocument {
 			churchNode(community, canonical, description),
 			breadcrumbNode(community, canonical),
 		]),
+		markdown: markdownUrl(path),
 	};
 }
 

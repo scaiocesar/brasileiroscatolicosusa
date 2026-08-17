@@ -1,8 +1,9 @@
 import { useEffect } from "react";
 import { MapContainer, Marker, TileLayer, useMap } from "react-leaflet";
-import { US_BOUNDS, US_CENTER } from "../../shared/constants";
+import { US_CENTER, US_MAX_BOUNDS } from "../../shared/constants";
 import type { CommunitySummary } from "../../shared/types";
 import { pinIcon } from "./pinIcon";
+import { RestrictToUnitedStates } from "./RestrictToUnitedStates";
 import "leaflet/dist/leaflet.css";
 
 function FlyToSelected({
@@ -49,17 +50,21 @@ export function MapView({
 	return (
 		<MapContainer
 			center={US_CENTER}
-			zoom={4}
-			minZoom={3}
-			maxBounds={US_BOUNDS}
-			maxBoundsViscosity={0.8}
+			zoom={5}
+			minZoom={4}
+			maxBounds={US_MAX_BOUNDS}
+			maxBoundsViscosity={1}
+			worldCopyJump={false}
 			className="map-canvas"
 			scrollWheelZoom
 		>
 			<TileLayer
 				attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
 				url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+				bounds={US_MAX_BOUNDS}
+				noWrap
 			/>
+			<RestrictToUnitedStates />
 			<FlyToSelected community={selected} />
 			{communities.map((community) => (
 				<Marker
