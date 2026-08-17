@@ -1,0 +1,91 @@
+export const SERVICE_TYPES = [
+	{ id: "missa", label: "Missa" },
+	{ id: "catequese", label: "Catequese" },
+	{ id: "batismo", label: "Batismo" },
+	{ id: "crisma", label: "Crisma" },
+	{ id: "primeira_eucaristia", label: "Primeira Eucaristia" },
+	{ id: "casamento", label: "Casamento" },
+	{ id: "confissao", label: "Confissão" },
+	{ id: "adoracao", label: "Adoração" },
+	{ id: "grupo_oracao", label: "Grupo de oração" },
+	{ id: "jovens", label: "Pastoral de jovens" },
+	{ id: "outros", label: "Outros" },
+] as const;
+
+export const SERVICE_TYPE_IDS = SERVICE_TYPES.map((item) => item.id);
+
+export const WEEKDAYS = [
+	{ id: 0, label: "Domingo" },
+	{ id: 1, label: "Segunda-feira" },
+	{ id: 2, label: "Terça-feira" },
+	{ id: 3, label: "Quarta-feira" },
+	{ id: 4, label: "Quinta-feira" },
+	{ id: 5, label: "Sexta-feira" },
+	{ id: 6, label: "Sábado" },
+] as const;
+
+export const MASS_LANGUAGES = [
+	{ id: "pt", label: "Português" },
+	{ id: "en", label: "Inglês" },
+	{ id: "bilingual", label: "Bilíngue" },
+] as const;
+
+export const US_STATES = [
+	{ code: "AL", name: "Alabama" },
+	{ code: "AK", name: "Alaska" },
+	{ code: "AZ", name: "Arizona" },
+	{ code: "AR", name: "Arkansas" },
+	{ code: "CA", name: "California" },
+	{ code: "CO", name: "Colorado" },
+	{ code: "CT", name: "Connecticut" },
+	{ code: "DE", name: "Delaware" },
+	{ code: "DC", name: "District of Columbia" },
+	{ code: "FL", name: "Florida" },
+	{ code: "GA", name: "Georgia" },
+	{ code: "HI", name: "Hawaii" },
+	{ code: "ID", name: "Idaho" },
+	{ code: "IL", name: "Illinois" },
+	{ code: "IN", name: "Indiana" },
+	{ code: "IA", name: "Iowa" },
+	{ code: "KS", name: "Kansas" },
+	{ code: "KY", name: "Kentucky" },
+	{ code: "LA", name: "Louisiana" },
+	{ code: "ME", name: "Maine" },
+	{ code: "MD", name: "Maryland" },
+	{ code: "MA", name: "Massachusetts" },
+	{ code: "MI", name: "Michigan" },
+	{ code: "MN", name: "Minnesota" },
+	{ code: "MS", name: "Mississippi" },
+	{ code: "MO", name: "Missouri" },
+	{ code: "MT", name: "Montana" },
+	{ code: "NE", name: "Nebraska" },
+	{ code: "NV", name: "Nevada" },
+	{ code: "NH", name: "New Hampshire" },
+	{ code: "NJ", name: "New Jersey" },
+	{ code: "NM", name: "New Mexico" },
+	{ code: "NY", name: "New York" },
+	{ code: "NC", name: "North Carolina" },
+	{ code: "ND", name: "North Dakota" },
+	{ code: "OH", name: "Ohio" },
+	{ code: "OK", name: "Oklahoma" },
+	{ code: "OR", name: "Oregon" },
+	{ code: "PA", name: "Pennsylvania" },
+	{ code: "RI", name: "Rhode Island" },
+	{ code: "SC", name: "South Carolina" },
+	{ code: "SD", name: "South Dakota" },
+	{ code: "TN", name: "Tennessee" },
+	{ code: "TX", name: "Texas" },
+	{ code: "UT", name: "Utah" },
+	{ code: "VT", name: "Vermont" },
+	{ code: "VA", name: "Virginia" },
+	{ code: "WA", name: "Washington" },
+	{ code: "WV", name: "West Virginia" },
+	{ code: "WI", name: "Wisconsin" },
+	{ code: "WY", name: "Wyoming" },
+] as const;
+
+export const US_CENTER: [number, number] = [39.8283, -98.5795];
+export const US_BOUNDS: [[number, number], [number, number]] = [
+	[18.5, -165],
+	[50.5, -64],
+];
