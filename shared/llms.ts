@@ -7,6 +7,7 @@ import {
 import {
 	canonicalUrl,
 	DEFAULT_DESCRIPTION,
+	SITE_EMAIL,
 	SITE_NAME,
 	SITE_ORIGIN,
 } from "./seo";
@@ -83,6 +84,8 @@ export function buildLlmsTxt(communities: CommunitySummary[]): string {
 
 Este diretório lista comunidades católicas brasileiras nos Estados Unidos (paróquias, missas em português, catequese e sacramentos). O conteúdo público está em português do Brasil. Páginas HTML têm versão Markdown no mesmo caminho com \`.md\`. Dados pessoais de quem cadastrou a comunidade não são publicados.
 
+Contato: ${SITE_EMAIL}
+
 Como usar:
 
 - Para uma resposta curta, leia este arquivo e \`/index.md\`.
@@ -112,6 +115,7 @@ ${stateLinks || "- Nenhuma comunidade aprovada no momento."}
 
 - [Mapa interativo](${SITE_ORIGIN}/): Interface humana (React). Prefira as versões Markdown ou a API
 - [Sitemap](${canonicalUrl("/sitemap.xml")}): URLs HTML para indexação
+- [E-mail de contato](mailto:${SITE_EMAIL}): ${SITE_EMAIL}
 `;
 }
 
@@ -138,6 +142,7 @@ ${communities.length} comunidade${communities.length === 1 ? "" : "s"} católica
 Versão humana: ${SITE_ORIGIN}/
 Catálogo completo: ${canonicalUrl("/llms-full.txt")}
 API: ${SITE_ORIGIN}/api/communities
+Contato: ${SITE_EMAIL}
 
 ${sections || "Nenhuma comunidade aprovada no momento."}
 `;
@@ -163,7 +168,7 @@ export function buildInformeMarkdown(): string {
 
 > Cadastre uma comunidade católica brasileira nos Estados Unidos para aparecer no mapa.
 
-Use o formulário humano em ${canonicalUrl("/informe")}. O pré-cadastro é revisado pela equipe antes de ficar público.
+Use o formulário humano em ${canonicalUrl("/informe")}. O pré-cadastro é revisado pela equipe antes de ficar público. Dúvidas: ${SITE_EMAIL}.
 
 Informe nome da comunidade, endereço, cidade, estado, horários de missa e serviços (missa, catequese, sacramentos, grupos). Depois da aprovação, a comunidade passa a aparecer no mapa, em \`/comunidade/{slug}.md\` e na API.
 `;
@@ -228,6 +233,7 @@ export function openApiSpec() {
 			title: SITE_NAME,
 			description: DEFAULT_DESCRIPTION,
 			version: "1.0.0",
+			contact: { email: SITE_EMAIL },
 		},
 		servers: [{ url: SITE_ORIGIN }],
 		paths: {

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { SERVICE_TYPES, US_STATES } from "../../shared/constants";
-import { communitySeo, homeSeo } from "../../shared/seo";
+import { communitySeo, homeSeo, SITE_EMAIL } from "../../shared/seo";
 import type { Community, CommunitySummary } from "../../shared/types";
 import { fetchCommunities, fetchCommunity } from "../api";
 import { CommunityPanel } from "../components/CommunityPanel";
@@ -80,6 +80,10 @@ export function HomePage() {
 						Mapa das comunidades católicas brasileiras nos Estados Unidos.
 						Encontre missas em português, catequese e sacramentos perto de
 						você.
+					</p>
+					<p className="contact-line">
+						Contato:{" "}
+						<a href={`mailto:${SITE_EMAIL}`}>{SITE_EMAIL}</a>
 					</p>
 					<input
 						type="search"

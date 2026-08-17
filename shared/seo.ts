@@ -2,6 +2,7 @@ import type { Community } from "./types";
 
 export const SITE_ORIGIN = "https://brasileiroscatolicosusa.org";
 export const SITE_NAME = "Brasileiros Católicos nos EUA";
+export const SITE_EMAIL = "contato@brasileiroscatolicosusa.org";
 export const GA_MEASUREMENT_ID = "G-FJ1GE5Q58M";
 export const OG_IMAGE_PATH = "/og-image.png";
 export const OG_IMAGE_WIDTH = 1200;
@@ -206,7 +207,14 @@ function organizationNode(): Record<string, unknown> {
 		name: SITE_NAME,
 		url: SITE_ORIGIN,
 		logo: ogImageUrl(),
+		email: SITE_EMAIL,
 		description: DEFAULT_DESCRIPTION,
+		contactPoint: {
+			"@type": "ContactPoint",
+			email: SITE_EMAIL,
+			contactType: "customer support",
+			availableLanguage: ["Portuguese", "English"],
+		},
 	};
 }
 

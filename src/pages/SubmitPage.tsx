@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { submitSeo } from "../../shared/seo";
+import { SITE_EMAIL, submitSeo } from "../../shared/seo";
 import type { CommunityInput } from "../../shared/types";
 import { fetchConfig, submitCommunity } from "../api";
 import { CommunityForm } from "../components/CommunityForm";
@@ -40,6 +40,8 @@ export function SubmitPage() {
 				<p className="lead">
 					Envie os dados da sua comunidade católica brasileira. A equipe
 					revisa o cadastro e, depois da aprovação, o pin aparece no mapa.
+					Dúvidas:{" "}
+					<a href={`mailto:${SITE_EMAIL}`}>{SITE_EMAIL}</a>.
 				</p>
 				{done ? (
 					<div className="success-card">

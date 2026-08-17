@@ -1,4 +1,5 @@
 import { NavLink } from "react-router-dom";
+import { SITE_EMAIL } from "../../shared/seo";
 
 export function Header() {
 	return (
@@ -15,6 +16,7 @@ export function Header() {
 					Mapa
 				</NavLink>
 				<NavLink to="/informe">Informe sua comunidade</NavLink>
+				<a href={`mailto:${SITE_EMAIL}`}>Contato</a>
 			</nav>
 		</header>
 	);
