@@ -24,6 +24,19 @@ export const WEEKDAYS = [
 	{ id: 6, label: "Sábado" },
 ] as const;
 
+export function formatMassTime(time: string): string {
+	const match = /^(\d{2}):(\d{2})$/.exec(time);
+	if (!match) return time;
+
+	const hours24 = Number(match[1]);
+	const minutes = match[2];
+	if (hours24 > 23) return time;
+
+	const period = hours24 < 12 ? "AM" : "PM";
+	const hours12 = hours24 % 12 || 12;
+	return `${hours12}:${minutes} ${period}`;
+}
+
 export const MASS_LANGUAGES = [
 	{ id: "pt", label: "Português" },
 	{ id: "en", label: "Inglês" },

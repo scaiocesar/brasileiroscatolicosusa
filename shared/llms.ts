@@ -3,6 +3,7 @@ import {
 	SERVICE_TYPES,
 	US_STATES,
 	WEEKDAYS,
+	formatMassTime,
 } from "./constants";
 import {
 	canonicalUrl,
@@ -199,7 +200,7 @@ export function communityMarkdown(community: PublicCommunity): string {
 			const day = weekdayLabel(item.day_of_week);
 			const language = languageLabel(item.language);
 			const notes = item.notes?.trim() ? ` — ${item.notes.trim()}` : "";
-			lines.push(`- ${day} ${item.time} (${language})${notes}`);
+			lines.push(`- ${day} ${formatMassTime(item.time)} (${language})${notes}`);
 		}
 	}
 

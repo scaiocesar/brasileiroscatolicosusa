@@ -1,5 +1,10 @@
 import { Link } from "react-router-dom";
-import { MASS_LANGUAGES, SERVICE_TYPES, WEEKDAYS } from "../../shared/constants";
+import {
+	MASS_LANGUAGES,
+	SERVICE_TYPES,
+	WEEKDAYS,
+	formatMassTime,
+} from "../../shared/constants";
 import type { Community } from "../../shared/types";
 import {
 	externalUrl,
@@ -73,7 +78,7 @@ export function CommunityPanel({
 						{community.mass_schedules.map((item) => (
 							<li key={`${item.day_of_week}-${item.time}-${item.language}`}>
 								<strong>
-									{weekdayLabel(item.day_of_week)} · {item.time}
+									{weekdayLabel(item.day_of_week)} · {formatMassTime(item.time)}
 								</strong>
 								<span>{languageLabel(item.language)}</span>
 								{item.notes ? <em>{item.notes}</em> : null}
