@@ -138,14 +138,17 @@ export function CommunityForm({
 		}
 	}
 
-	function toggleService(id: string) {
-		const exists = form.services.some((item) => item.service_type === id);
-		update(
-			"services",
-			exists
-				? form.services.filter((item) => item.service_type !== id)
-				: [...form.services, { service_type: id, notes: "" }],
-		);
+	function setService(id: string, checked: boolean) {
+		setForm((current) => {
+			const exists = current.services.some((item) => item.service_type === id);
+			if (checked === exists) return current;
+			return {
+				...current,
+				services: checked
+					? [...current.services, { service_type: id, notes: "" }]
+					: current.services.filter((item) => item.service_type !== id),
+			};
+		});
 	}
 
 	async function handleSubmit(event: FormEvent) {
@@ -157,13 +160,39 @@ export function CommunityForm({
 	}
 
 	return (
-		<form className="community-form" onSubmit={handleSubmit}>
+		<form
+			className="community-form"
+			onSubmit={handleSubmit}
+			toolname={
+				mode === "public"
+					? "submit_community"
+					: mode === "correction"
+						? "submit_correction"
+						: undefined
+			}
+			tooltitle={
+				mode === "public"
+					? "Informar comunidade"
+					: mode === "correction"
+						? "Corrigir comunidade"
+						: undefined
+			}
+			tooldescription={
+				mode === "public"
+					? "Preenche o pré-cadastro de uma comunidade católica brasileira nos EUA. O envio exige clique humano por causa da verificação anti-spam."
+					: mode === "correction"
+						? "Preenche a sugestão de correção desta comunidade. O envio exige clique humano por causa da verificação anti-spam."
+						: undefined
+			}
+		>
 			{error ? <p className="form-error">{error}</p> : null}
 
 			<label>
 				Nome da comunidade
 				<input
 					required
+					name="name"
+					toolparamdescription="Nome oficial da comunidade, paróquia ou apostolado"
 					value={form.name}
 					onChange={(event) => update("name", event.target.value)}
 				/>
@@ -172,7 +201,9 @@ export function CommunityForm({
 			<label>
 				Descrição
 				<textarea
+					name="description"
 					rows={3}
+					toolparamdescription="Resumo da comunidade, missas ou público atendido"
 					value={form.description ?? ""}
 					onChange={(event) => update("description", event.target.value)}
 				/>
@@ -183,6 +214,8 @@ export function CommunityForm({
 					Endereço
 					<input
 						required
+						name="address_line"
+						toolparamdescription="Rua e número nos Estados Unidos"
 						value={form.address_line}
 						onChange={(event) => update("address_line", event.target.value)}
 					/>
@@ -191,6 +224,7 @@ export function CommunityForm({
 					Cidade
 					<input
 						required
+						name="city"
 						value={form.city}
 						onChange={(event) => update("city", event.target.value)}
 					/>
@@ -202,6 +236,8 @@ export function CommunityForm({
 					Estado
 					<select
 						required
+						name="state"
+						toolparamdescription="Sigla do estado dos EUA, por exemplo FL, MA ou TX"
 						value={form.state}
 						onChange={(event) => update("state", event.target.value)}
 					>
@@ -216,6 +252,8 @@ export function CommunityForm({
 				<label>
 					CEP
 					<input
+						name="zip"
+						toolparamdescription="CEP americano (ZIP code)"
 						value={form.zip ?? ""}
 						onChange={(event) => update("zip", event.target.value)}
 					/>
@@ -243,6 +281,7 @@ export function CommunityForm({
 				<label>
 					Site
 					<input
+						name="website_url"
 						value={form.website_url ?? ""}
 						onChange={(event) => update("website_url", event.target.value)}
 						placeholder="https://"
@@ -251,6 +290,8 @@ export function CommunityForm({
 				<label>
 					WhatsApp
 					<input
+						name="whatsapp"
+						toolparamdescription="Número de WhatsApp com código do país, só dígitos"
 						value={form.whatsapp ?? ""}
 						onChange={(event) => update("whatsapp", event.target.value)}
 						placeholder="15551234567"
@@ -262,6 +303,7 @@ export function CommunityForm({
 				<label>
 					Instagram
 					<input
+						name="instagram"
 						value={form.instagram ?? ""}
 						onChange={(event) => update("instagram", event.target.value)}
 					/>
@@ -269,6 +311,7 @@ export function CommunityForm({
 				<label>
 					Facebook
 					<input
+						name="facebook"
 						value={form.facebook ?? ""}
 						onChange={(event) => update("facebook", event.target.value)}
 					/>
@@ -280,6 +323,7 @@ export function CommunityForm({
 					E-mail da comunidade
 					<input
 						type="email"
+						name="email"
 						value={form.email ?? ""}
 						onChange={(event) => update("email", event.target.value)}
 					/>
@@ -287,6 +331,7 @@ export function CommunityForm({
 				<label>
 					Telefone
 					<input
+						name="phone"
 						value={form.phone ?? ""}
 						onChange={(event) => update("phone", event.target.value)}
 					/>
@@ -298,6 +343,8 @@ export function CommunityForm({
 				{form.mass_schedules.map((schedule, index) => (
 					<div className="schedule-row" key={`${schedule.day_of_week}-${index}`}>
 						<select
+							name={`mass_day_${index}`}
+							toolparamdescription={`Dia da semana do horário ${index + 1} (0=domingo, 6=sábado)`}
 							value={schedule.day_of_week}
 							onChange={(event) => {
 								const next = [...form.mass_schedules];
@@ -316,6 +363,8 @@ export function CommunityForm({
 						</select>
 						<input
 							type="time"
+							name={`mass_time_${index}`}
+							toolparamdescription={`Horário ${index + 1} no formato HH:MM`}
 							value={schedule.time}
 							onChange={(event) => {
 								const next = [...form.mass_schedules];
@@ -324,6 +373,8 @@ export function CommunityForm({
 							}}
 						/>
 						<select
+							name={`mass_language_${index}`}
+							toolparamdescription={`Idioma do horário ${index + 1}: pt, en ou bilingual`}
 							value={schedule.language}
 							onChange={(event) => {
 								const next = [...form.mass_schedules];
@@ -341,6 +392,7 @@ export function CommunityForm({
 							))}
 						</select>
 						<input
+							name={`mass_notes_${index}`}
 							placeholder="Observação"
 							value={schedule.notes ?? ""}
 							onChange={(event) => {
@@ -384,10 +436,13 @@ export function CommunityForm({
 						<label key={service.id} className="check">
 							<input
 								type="checkbox"
+								name={`service_${service.id}`}
 								checked={form.services.some(
 									(item) => item.service_type === service.id,
 								)}
-								onChange={() => toggleService(service.id)}
+								onChange={(event) =>
+									setService(service.id, event.target.checked)
+								}
 							/>
 							{service.label}
 						</label>
@@ -401,6 +456,8 @@ export function CommunityForm({
 						Seu nome
 						<input
 							required
+							name="submitted_by_name"
+							toolparamdescription="Nome de quem está enviando o formulário"
 							value={form.submitted_by_name ?? ""}
 							onChange={(event) =>
 								update("submitted_by_name", event.target.value)
@@ -412,6 +469,8 @@ export function CommunityForm({
 						<input
 							required
 							type="email"
+							name="submitted_by_email"
+							toolparamdescription="E-mail de quem está enviando o formulário"
 							value={form.submitted_by_email ?? ""}
 							onChange={(event) =>
 								update("submitted_by_email", event.target.value)
@@ -449,7 +508,9 @@ export function CommunityForm({
 				<label>
 					O que precisa ser corrigido?
 					<textarea
+						name="correction_note"
 						rows={3}
+						toolparamdescription="O que está errado e qual deve ser o dado correto"
 						placeholder="Ex.: o horário da missa mudou, o endereço está incompleto..."
 						value={form.correction_note ?? ""}
 						onChange={(event) =>

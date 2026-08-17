@@ -470,20 +470,61 @@ export async function setStatus(
 	return getCommunity(db, String(id), true);
 }
 
+function uniqueIds(ids: number[]): number[] {
+	return [...new Set(ids.filter((id) => Number.isInteger(id) && id > 0))];
+}
+
+export async function setStatusMany(
+	db: D1Database,
+	ids: number[],
+	status: CommunityStatus,
+): Promise<number> {
+	const list = uniqueIds(ids);
+	if (list.length === 0) return 0;
+	const approvedAt = status === "approved" ? new Date().toISOString() : null;
+	const placeholders = list.map(() => "?").join(", ");
+	const result = await db
+		.prepare(
+			`UPDATE communities SET status = ?, approved_at = ?, updated_at = datetime('now')
+       WHERE id IN (${placeholders})`,
+		)
+		.bind(status, approvedAt, ...list)
+		.run();
+	return result.meta.changes ?? 0;
+}
+
 export async function deleteCommunity(
 	db: D1Database,
 	id: number,
 ): Promise<boolean> {
+	const deleted = await deleteCommunities(db, [id]);
+	return deleted > 0;
+}
+
+export async function deleteCommunities(
+	db: D1Database,
+	ids: number[],
+): Promise<number> {
+	const list = uniqueIds(ids);
+	if (list.length === 0) return 0;
+	const placeholders = list.map(() => "?").join(", ");
 	await db.batch([
-		db.prepare("DELETE FROM mass_schedules WHERE community_id = ?").bind(id),
-		db.prepare("DELETE FROM community_services WHERE community_id = ?").bind(id),
-		db.prepare("DELETE FROM communities WHERE id = ?").bind(id),
+		db
+			.prepare(`DELETE FROM mass_schedules WHERE community_id IN (${placeholders})`)
+			.bind(...list),
+		db
+			.prepare(
+				`DELETE FROM community_services WHERE community_id IN (${placeholders})`,
+			)
+			.bind(...list),
+		db
+			.prepare(
+				`DELETE FROM community_corrections WHERE community_id IN (${placeholders})`,
+			)
+			.bind(...list),
+		db.prepare(`DELETE FROM communities WHERE id IN (${placeholders})`).bind(...list),
 	]);
-	const leftover = await db
-		.prepare("SELECT id FROM communities WHERE id = ?")
-		.bind(id)
-		.first();
-	return leftover == null;
+	return list.length;
 }
 
 export async function resolveCoordinates(

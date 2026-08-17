@@ -4,6 +4,7 @@ import type { Community, CommunityCorrection, CommunityInput, CommunityStatus } 
 import { usePageSeo } from "../usePageSeo";
 import {
 	adminApproveCorrection,
+	adminBatchCommunities,
 	adminDelete,
 	adminImportCsv,
 	adminList,
@@ -81,6 +82,8 @@ export function AdminPage() {
 	const [importResult, setImportResult] = useState<string | null>(null);
 	const [corrections, setCorrections] = useState<CommunityCorrection[]>([]);
 	const [reviewing, setReviewing] = useState<CommunityCorrection | null>(null);
+	const [selected, setSelected] = useState<number[]>([]);
+	const [batchBusy, setBatchBusy] = useState(false);
 
 	async function load(nextFilter = filter) {
 		const [list, pendingCorrections] = await Promise.all([
@@ -155,6 +158,60 @@ export function AdminPage() {
 			setError(err instanceof Error ? err.message : "Não foi possível importar.");
 		} finally {
 			setImporting(false);
+		}
+	}
+
+	function toggleSelected(id: number) {
+		setSelected((current) =>
+			current.includes(id)
+				? current.filter((item) => item !== id)
+				: [...current, id],
+		);
+	}
+
+	const allVisibleSelected =
+		communities.length > 0 &&
+		communities.every((community) => selected.includes(community.id));
+
+	function toggleSelectAll() {
+		if (allVisibleSelected) {
+			const visible = new Set(communities.map((community) => community.id));
+			setSelected((current) => current.filter((id) => !visible.has(id)));
+			return;
+		}
+		setSelected((current) => [
+			...new Set([...current, ...communities.map((community) => community.id)]),
+		]);
+	}
+
+	async function runBatch(action: "approve" | "reject" | "delete") {
+		if (selected.length === 0) return;
+		if (
+			action === "delete" &&
+			!confirm(`Excluir ${selected.length} comunidade(s)? Isso não pode ser desfeito.`)
+		) {
+			return;
+		}
+		setBatchBusy(true);
+		setError(null);
+		setImportResult(null);
+		try {
+			const result = await adminBatchCommunities(action, selected);
+			setSelected([]);
+			await load();
+			if (action === "delete") {
+				setImportResult(`${result.deleted} comunidade(s) excluída(s).`);
+			} else {
+				setImportResult(
+					`${result.updated} comunidade(s) ${action === "approve" ? "aprovada(s)" : "rejeitada(s)"}.`,
+				);
+			}
+		} catch (err) {
+			setError(
+				err instanceof Error ? err.message : "Não foi possível atualizar em lote.",
+			);
+		} finally {
+			setBatchBusy(false);
 		}
 	}
 
@@ -260,6 +317,7 @@ export function AdminPage() {
 							className={filter === item.id ? "chip is-active" : "chip"}
 							onClick={async () => {
 								setFilter(item.id);
+								setSelected([]);
 								setError(null);
 								try {
 									await load(item.id);
@@ -275,6 +333,49 @@ export function AdminPage() {
 
 				{error ? <p className="form-error">{error}</p> : null}
 				{importResult ? <p className="form-ok">{importResult}</p> : null}
+
+				{communities.length > 0 ? (
+					<div className="batch-bar">
+						<label className="admin-pick">
+							<input
+								type="checkbox"
+								checked={allVisibleSelected}
+								onChange={toggleSelectAll}
+							/>
+							Selecionar todas
+						</label>
+						{selected.length > 0 ? (
+							<>
+								<span>{selected.length} selecionada(s)</span>
+								<button
+									type="button"
+									disabled={batchBusy}
+									onClick={() => runBatch("approve")}
+								>
+									Aprovar
+								</button>
+								<button
+									type="button"
+									className="secondary"
+									disabled={batchBusy}
+									onClick={() => runBatch("reject")}
+								>
+									Rejeitar
+								</button>
+								<button
+									type="button"
+									className="ghost"
+									disabled={batchBusy}
+									onClick={() => runBatch("delete")}
+								>
+									Excluir
+								</button>
+							</>
+						) : (
+							<span>Selecione comunidades para atualizar ou excluir em lote.</span>
+						)}
+					</div>
+				) : null}
 
 				{corrections.length > 0 ? (
 					<section className="editor-card">
@@ -394,6 +495,13 @@ export function AdminPage() {
 				<ul className="admin-list">
 					{communities.map((community) => (
 						<li key={community.id}>
+							<label className="admin-pick">
+								<input
+									type="checkbox"
+									checked={selected.includes(community.id)}
+									onChange={() => toggleSelected(community.id)}
+								/>
+							</label>
 							<div>
 								<strong>{community.name}</strong>
 								<span>

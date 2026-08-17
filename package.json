@@ -17,6 +17,7 @@
     "scrape:apostolado": "node scripts/scrape-apostolado.mjs"
   },
   "dependencies": {
+    "@mcp-b/webmcp-polyfill": "^4.0.0",
     "hono": "^4.13.2",
     "leaflet": "^1.9.4",
     "react": "^19.2.8",

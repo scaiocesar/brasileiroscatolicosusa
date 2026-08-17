@@ -94,6 +94,7 @@ Como usar:
 - Para filtrar, use \`GET /api/communities?state=FL&city=Miami&q=nome&service=missa\`.
 - Serviços válidos: ${SERVICE_TYPES.map((item) => `\`${item.id}\``).join(", ")}.
 - Estados usam sigla dos EUA (ex.: \`FL\`, \`MA\`, \`TX\`).
+- No mapa HTML, agentes de navegador podem chamar ferramentas WebMCP em \`document.modelContext\`: \`search_communities\`, \`open_community\`, \`get_community\`, \`close_community\`, \`suggest_correction\`, \`go_to_map\`, \`go_to_submit_form\`. Os formulários de cadastro e correção são ferramentas declarativas e exigem confirmação humana no envio.
 
 ## Páginas
 
@@ -113,7 +114,7 @@ ${stateLinks || "- Nenhuma comunidade aprovada no momento."}
 
 ## Optional
 
-- [Mapa interativo](${SITE_ORIGIN}/): Interface humana (React). Prefira as versões Markdown ou a API
+- [Mapa interativo](${SITE_ORIGIN}/): Interface humana (React) com ferramentas WebMCP para agentes no navegador. Prefira as versões Markdown ou a API quando não estiver no mapa
 - [Sitemap](${canonicalUrl("/sitemap.xml")}): URLs HTML para indexação
 - [E-mail de contato](mailto:${SITE_EMAIL}): ${SITE_EMAIL}
 `;
@@ -290,7 +291,7 @@ export function openApiSpec() {
 				},
 			},
 			"/llms.txt": {
-				get: { summary: "Índice para agentes de IA" },
+				get: { summary: "Índice para agentes de IA, incluindo ferramentas WebMCP" },
 			},
 			"/llms-full.txt": {
 				get: { summary: "Catálogo completo em Markdown" },

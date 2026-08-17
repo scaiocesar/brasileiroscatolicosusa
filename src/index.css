@@ -366,6 +366,17 @@ textarea {
   max-width: 46rem;
 }
 
+form:tool-form-active {
+  outline: 2px dashed var(--gold);
+  outline-offset: 6px;
+}
+
+button:tool-submit-active,
+input:tool-submit-active {
+  outline: 2px dashed var(--navy);
+  outline-offset: 2px;
+}
+
 .community-form,
 .success-card,
 .editor-card {
@@ -525,6 +536,33 @@ button.chip.is-active {
   border-radius: 14px;
   padding: 1rem;
   margin-bottom: 0.7rem;
+  align-items: flex-start;
+}
+
+.admin-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 600;
+  cursor: pointer;
+  flex: none;
+}
+
+.admin-pick input {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.batch-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+  margin: 0 0 1rem;
+  padding: 0.8rem 1rem;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
 }
 
 .admin-list span,

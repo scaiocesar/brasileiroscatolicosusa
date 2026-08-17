@@ -17,6 +17,7 @@ import {
 } from "./auth";
 import {
 	createCommunity,
+	deleteCommunities,
 	deleteCommunity,
 	findDuplicateCommunity,
 	getCommunity,
@@ -26,6 +27,7 @@ import {
 	listSummaries,
 	resolveCoordinates,
 	setStatus,
+	setStatusMany,
 	updateCommunity,
 	validateInput,
 } from "./db";
@@ -417,6 +419,36 @@ app.post("/api/admin/communities/import", async (c) => {
 	}
 
 	return c.json({ ok: true, imported, skipped, errors });
+});
+
+app.post("/api/admin/communities/batch", async (c) => {
+	if (!(await requireAdmin(c))) return c.json({ error: "Não autorizado." }, 401);
+	const body = (await c.req.json().catch(() => null)) as {
+		action?: string;
+		ids?: unknown;
+	} | null;
+	const action = body?.action;
+	const ids = Array.isArray(body?.ids)
+		? body.ids.filter((id): id is number => Number.isInteger(id) && id > 0)
+		: [];
+	const unique = [...new Set(ids)].slice(0, 200);
+	if (unique.length === 0) {
+		return c.json({ error: "Selecione ao menos uma comunidade." }, 400);
+	}
+
+	if (action === "approve" || action === "reject") {
+		const updated = await setStatusMany(
+			c.env.DB,
+			unique,
+			action === "approve" ? "approved" : "rejected",
+		);
+		return c.json({ ok: true, updated, deleted: 0 });
+	}
+	if (action === "delete") {
+		const deleted = await deleteCommunities(c.env.DB, unique);
+		return c.json({ ok: true, updated: 0, deleted });
+	}
+	return c.json({ error: "Ação inválida." }, 400);
 });
 
 app.put("/api/admin/communities/:id", async (c) => {

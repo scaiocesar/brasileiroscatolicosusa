@@ -183,6 +183,30 @@ export async function adminDelete(id: number): Promise<void> {
 	if (!response.ok) throw new Error(await parseError(response));
 }
 
+export async function adminBatchCommunities(
+	action: "approve" | "reject" | "delete",
+	ids: number[],
+): Promise<{ updated: number; deleted: number }> {
+	const response = await fetch("/api/admin/communities/batch", {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		credentials: "include",
+		body: JSON.stringify({ action, ids }),
+	});
+	const data = (await response.json().catch(() => null)) as {
+		error?: string;
+		updated?: number;
+		deleted?: number;
+	} | null;
+	if (!response.ok) {
+		throw new Error(data?.error || "Não foi possível atualizar em lote.");
+	}
+	return {
+		updated: data?.updated ?? 0,
+		deleted: data?.deleted ?? 0,
+	};
+}
+
 export async function adminListCorrections(
 	status?: CommunityStatus,
 ): Promise<CommunityCorrection[]> {
