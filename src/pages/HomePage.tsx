@@ -1,24 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
-import {
-	SERVICE_TYPE_IDS,
-	SERVICE_TYPES,
-	US_STATES,
-	formatMassTime,
-} from "../../shared/constants";
+import { useNavigate, useParams } from "react-router-dom";
+import { SERVICE_TYPE_IDS } from "../../shared/constants";
 import { communitySeo, homeSeo } from "../../shared/seo";
 import type { Community, CommunitySummary } from "../../shared/types";
 import { fetchCommunities, fetchCommunity } from "../api";
 import { CommunityPanel } from "../components/CommunityPanel";
-import { CoverageHighlights } from "../components/CoverageHighlights";
 import { Header } from "../components/Header";
 import { MapView } from "../components/MapView";
-import {
-	formatDistanceKm,
-	haversineKm,
-	sortByDistance,
-	type LatLng,
-} from "../geo";
+import { sortByDistance, type LatLng } from "../geo";
 import { usePageSeo } from "../usePageSeo";
 import { useWebMcpTools, type WebMcpTool } from "../useWebMcpTools";
 import {
@@ -42,28 +31,17 @@ export function HomePage() {
 	const [stateFilter, setStateFilter] = useState("");
 	const [serviceFilter, setServiceFilter] = useState("");
 	const [error, setError] = useState<string | null>(null);
-	const [loading, setLoading] = useState(true);
 	const [origin, setOrigin] = useState<LatLng | null>(null);
 	const [originToken, setOriginToken] = useState(0);
 	const [locating, setLocating] = useState(false);
 	const [locateError, setLocateError] = useState<string | null>(null);
-	const [sidebarOpen, setSidebarOpen] = useState(
-		() =>
-			typeof window === "undefined" ||
-			!window.matchMedia("(max-width: 900px)").matches,
-	);
-
-	function isMobileMap() {
-		return window.matchMedia("(max-width: 900px)").matches;
-	}
 
 	useEffect(() => {
 		fetchCommunities()
 			.then(setCommunities)
 			.catch((err: unknown) =>
 				setError(err instanceof Error ? err.message : "Erro ao carregar o mapa."),
-			)
-			.finally(() => setLoading(false));
+			);
 	}, []);
 
 	useEffect(() => {
@@ -99,7 +77,6 @@ export function HomePage() {
 	const selectCommunity = useCallback(
 		(community: CommunitySummary) => {
 			navigate(`/comunidade/${community.slug}`);
-			if (isMobileMap()) setSidebarOpen(false);
 		},
 		[navigate],
 	);
@@ -119,7 +96,6 @@ export function HomePage() {
 				});
 				setOriginToken((value) => value + 1);
 				setLocating(false);
-				if (isMobileMap()) setSidebarOpen(false);
 			},
 			() => {
 				setLocateError("Não foi possível obter sua localização.");
@@ -295,137 +271,16 @@ export function HomePage() {
 
 	useWebMcpTools(mapTools);
 
-	const searchFields = (
-		<>
-			<input
-				type="search"
-				placeholder="Cidade, ZIP ou nome da comunidade"
-				aria-label="Buscar comunidade por nome, cidade ou endereço"
-				value={query}
-				onChange={(event) => setQuery(event.target.value)}
-			/>
-			<select
-				aria-label="Filtrar por estado"
-				value={stateFilter}
-				onChange={(event) => setStateFilter(event.target.value)}
-			>
-				<option value="">Todos os estados</option>
-				{US_STATES.map((state) => (
-					<option key={state.code} value={state.code}>
-						{state.name}
-					</option>
-				))}
-			</select>
-			<select
-				aria-label="Filtrar por serviço"
-				value={serviceFilter}
-				onChange={(event) => setServiceFilter(event.target.value)}
-			>
-				<option value="">Todos os serviços</option>
-				{SERVICE_TYPES.map((service) => (
-					<option key={service.id} value={service.id}>
-						{service.label}
-					</option>
-				))}
-			</select>
-		</>
-	);
-
 	return (
 		<div className="app-shell map-shell">
-			<Header
-				menuOpen={sidebarOpen}
-				onToggleMenu={() => setSidebarOpen((open) => !open)}
-			/>
-			<div
-				className={`map-layout${sidebarOpen ? " sidebar-open" : " sidebar-collapsed"}`}
-			>
-				<aside className="map-sidebar" aria-hidden={!sidebarOpen}>
-					<div className="map-sidebar-head">
-						{selected ? (
-							<p className="map-sidebar-title">Comunidades</p>
-						) : (
-							<h1 className="map-sidebar-title">Comunidades</h1>
-						)}
-						<button
-							type="button"
-							className="ghost sidebar-hide"
-							onClick={() => setSidebarOpen(false)}
-						>
-							Ocultar lista
-						</button>
-					</div>
-					<p className="map-sidebar-lead">
-						Missas em português perto de você.
-					</p>
-					{searchFields}
-					<div className="locate-row">
-						<button
-							type="button"
-							className="secondary"
-							onClick={locateMe}
-							disabled={locating}
-						>
-							{locating ? "Localizando..." : "Perto de mim"}
-						</button>
-					</div>
-					{locateError ? <p className="form-error">{locateError}</p> : null}
-					<p className="count">
-						{loading
-							? "Carregando o mapa…"
-							: `${filtered.length} comunidade${filtered.length === 1 ? "" : "s"}`}
-					</p>
-					{error ? <p className="form-error">{error}</p> : null}
-					{loading ? (
-						<div className="list-skeleton" aria-hidden="true">
-							<span />
-							<span />
-							<span />
-						</div>
-					) : (
-						<ul className="community-list">
-							{filtered.map((community) => (
-								<li key={community.id}>
-									<Link
-										to={`/comunidade/${community.slug}`}
-										className={community.slug === slug ? "is-active" : ""}
-										onClick={() => {
-											if (isMobileMap()) setSidebarOpen(false);
-										}}
-									>
-										<strong>{community.name}</strong>
-										<span>
-											{origin
-												? `${formatDistanceKm(haversineKm(origin, community))} · `
-												: ""}
-											{community.city}, {community.state}
-											{community.sunday_masses.length > 0
-												? ` · Domingo ${community.sunday_masses.map(formatMassTime).join(", ")}`
-												: ""}
-										</span>
-									</Link>
-								</li>
-							))}
-						</ul>
-					)}
-					{!loading && filtered.length === 0 ? (
-						<p className="coverage-cta">
-							Nenhuma comunidade com esses filtros.{" "}
-							<Link to="/informe">Informe a sua</Link>
-						</p>
-					) : null}
-					{loading ? null : (
-						<CoverageHighlights
-							communities={communities}
-							origin={origin}
-							onNavigate={() => {
-								if (isMobileMap()) setSidebarOpen(false);
-							}}
-						/>
-					)}
-				</aside>
+			<Header />
+			<h1 className="sr-only">
+				Encontre missas em português nas comunidades católicas brasileiras nos
+				EUA
+			</h1>
+			<div className="map-layout">
 				<div className="map-stage">
-					{!sidebarOpen && !selected ? (
+					{selected ? null : (
 						<div className="map-search-bar">
 							<input
 								type="search"
@@ -442,19 +297,14 @@ export function HomePage() {
 							>
 								{locating ? "Localizando..." : "Perto de mim"}
 							</button>
-							<button type="button" onClick={() => setSidebarOpen(true)}>
-								Ver lista
-							</button>
 						</div>
-					) : null}
-					{locateError && !sidebarOpen ? (
-						<p className="map-locate-error">{locateError}</p>
-					) : null}
+					)}
+					{error ? <p className="map-locate-error">{error}</p> : null}
+					{locateError ? <p className="map-locate-error">{locateError}</p> : null}
 					<MapView
 						communities={filtered}
 						selectedSlug={slug}
 						onSelect={selectCommunity}
-						layoutToken={sidebarOpen}
 						origin={origin}
 						originToken={originToken}
 					/>
