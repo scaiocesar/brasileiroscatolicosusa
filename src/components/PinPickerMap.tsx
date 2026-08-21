@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from "react-leaflet";
-import { US_CENTER } from "../../shared/constants";
 import { pinIcon } from "./pinIcon";
 import "leaflet/dist/leaflet.css";
 
@@ -46,16 +45,29 @@ export function PinPickerMap({
 	onChange: (lat: number, lng: number) => void;
 	focusToken?: number;
 }) {
-	const position: [number, number] = [
-		lat ?? US_CENTER[0],
-		lng ?? US_CENTER[1],
-	];
+	if (
+		lat == null ||
+		lng == null ||
+		!Number.isFinite(lat) ||
+		!Number.isFinite(lng)
+	) {
+		return (
+			<div className="pin-picker pin-picker-empty">
+				<p className="hint">
+					Preencha o endereço e clique em Localizar no mapa para posicionar o
+					pin. Evite deixar o marcador no centro do país.
+				</p>
+			</div>
+		);
+	}
+
+	const position: [number, number] = [lat, lng];
 
 	return (
 		<div className="pin-picker">
 			<MapContainer
 				center={position}
-				zoom={lat && lng ? 13 : 4}
+				zoom={13}
 				className="pin-picker-map"
 				scrollWheelZoom
 			>

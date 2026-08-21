@@ -1,17 +1,24 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
 	SERVICE_TYPE_IDS,
 	SERVICE_TYPES,
 	US_STATES,
+	formatMassTime,
 } from "../../shared/constants";
-import { communitySeo, homeSeo, SITE_EMAIL } from "../../shared/seo";
+import { communitySeo, homeSeo } from "../../shared/seo";
 import type { Community, CommunitySummary } from "../../shared/types";
 import { fetchCommunities, fetchCommunity } from "../api";
 import { CommunityPanel } from "../components/CommunityPanel";
 import { CoverageHighlights } from "../components/CoverageHighlights";
 import { Header } from "../components/Header";
 import { MapView } from "../components/MapView";
+import {
+	formatDistanceKm,
+	haversineKm,
+	sortByDistance,
+	type LatLng,
+} from "../geo";
 import { usePageSeo } from "../usePageSeo";
 import { useWebMcpTools, type WebMcpTool } from "../useWebMcpTools";
 import {
@@ -35,6 +42,11 @@ export function HomePage() {
 	const [stateFilter, setStateFilter] = useState("");
 	const [serviceFilter, setServiceFilter] = useState("");
 	const [error, setError] = useState<string | null>(null);
+	const [loading, setLoading] = useState(true);
+	const [origin, setOrigin] = useState<LatLng | null>(null);
+	const [originToken, setOriginToken] = useState(0);
+	const [locating, setLocating] = useState(false);
+	const [locateError, setLocateError] = useState<string | null>(null);
 	const [sidebarOpen, setSidebarOpen] = useState(
 		() =>
 			typeof window === "undefined" ||
@@ -50,7 +62,8 @@ export function HomePage() {
 			.then(setCommunities)
 			.catch((err: unknown) =>
 				setError(err instanceof Error ? err.message : "Erro ao carregar o mapa."),
-			);
+			)
+			.finally(() => setLoading(false));
 	}, []);
 
 	useEffect(() => {
@@ -68,15 +81,14 @@ export function HomePage() {
 		return () => document.body.classList.remove("panel-open");
 	}, [selected]);
 
-	const filtered = useMemo(
-		() =>
-			filterMapCommunities(communities, {
-				q: query,
-				state: stateFilter,
-				service: serviceFilter,
-			}),
-		[communities, query, serviceFilter, stateFilter],
-	);
+	const filtered = useMemo(() => {
+		const matches = filterMapCommunities(communities, {
+			q: query,
+			state: stateFilter,
+			service: serviceFilter,
+		});
+		return origin ? sortByDistance(matches, origin) : matches;
+	}, [communities, origin, query, serviceFilter, stateFilter]);
 
 	const seo = useMemo(
 		() => (selected ? communitySeo(selected) : homeSeo()),
@@ -84,9 +96,37 @@ export function HomePage() {
 	);
 	usePageSeo(seo);
 
-	function selectCommunity(community: CommunitySummary) {
-		navigate(`/comunidade/${community.slug}`);
-		if (isMobileMap()) setSidebarOpen(false);
+	const selectCommunity = useCallback(
+		(community: CommunitySummary) => {
+			navigate(`/comunidade/${community.slug}`);
+			if (isMobileMap()) setSidebarOpen(false);
+		},
+		[navigate],
+	);
+
+	function locateMe() {
+		if (!navigator.geolocation) {
+			setLocateError("Seu navegador não informa a localização.");
+			return;
+		}
+		setLocating(true);
+		setLocateError(null);
+		navigator.geolocation.getCurrentPosition(
+			(position) => {
+				setOrigin({
+					lat: position.coords.latitude,
+					lng: position.coords.longitude,
+				});
+				setOriginToken((value) => value + 1);
+				setLocating(false);
+				if (isMobileMap()) setSidebarOpen(false);
+			},
+			() => {
+				setLocateError("Não foi possível obter sua localização.");
+				setLocating(false);
+			},
+			{ enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 },
+		);
 	}
 
 	const mapTools = useMemo((): WebMcpTool[] => {
@@ -255,6 +295,42 @@ export function HomePage() {
 
 	useWebMcpTools(mapTools);
 
+	const searchFields = (
+		<>
+			<input
+				type="search"
+				placeholder="Cidade, ZIP ou nome da comunidade"
+				aria-label="Buscar comunidade por nome, cidade ou endereço"
+				value={query}
+				onChange={(event) => setQuery(event.target.value)}
+			/>
+			<select
+				aria-label="Filtrar por estado"
+				value={stateFilter}
+				onChange={(event) => setStateFilter(event.target.value)}
+			>
+				<option value="">Todos os estados</option>
+				{US_STATES.map((state) => (
+					<option key={state.code} value={state.code}>
+						{state.name}
+					</option>
+				))}
+			</select>
+			<select
+				aria-label="Filtrar por serviço"
+				value={serviceFilter}
+				onChange={(event) => setServiceFilter(event.target.value)}
+			>
+				<option value="">Todos os serviços</option>
+				{SERVICE_TYPES.map((service) => (
+					<option key={service.id} value={service.id}>
+						{service.label}
+					</option>
+				))}
+			</select>
+		</>
+	);
+
 	return (
 		<div className="app-shell map-shell">
 			<Header
@@ -267,102 +343,120 @@ export function HomePage() {
 				<aside className="map-sidebar" aria-hidden={!sidebarOpen}>
 					<div className="map-sidebar-head">
 						{selected ? (
-							<p className="map-sidebar-title">Encontre sua comunidade</p>
+							<p className="map-sidebar-title">Comunidades</p>
 						) : (
-							<h1 className="map-sidebar-title">Encontre sua comunidade</h1>
+							<h1 className="map-sidebar-title">Comunidades</h1>
 						)}
 						<button
 							type="button"
 							className="ghost sidebar-hide"
 							onClick={() => setSidebarOpen(false)}
 						>
-							Ocultar menu
+							Ocultar lista
 						</button>
 					</div>
-					<p>
-						Mapa das comunidades católicas brasileiras nos Estados Unidos.
-						Encontre missas em português, catequese e sacramentos perto de
-						você.
+					<p className="map-sidebar-lead">
+						Missas em português perto de você.
 					</p>
-					<p className="contact-line">
-						Contato:{" "}
-						<a href={`mailto:${SITE_EMAIL}`}>{SITE_EMAIL}</a>
-					</p>
-					<input
-						type="search"
-						placeholder="Buscar por nome ou cidade"
-						aria-label="Buscar comunidade por nome ou cidade"
-						value={query}
-						onChange={(event) => setQuery(event.target.value)}
-					/>
-					<select
-						aria-label="Filtrar por estado"
-						value={stateFilter}
-						onChange={(event) => setStateFilter(event.target.value)}
-					>
-						<option value="">Todos os estados</option>
-						{US_STATES.map((state) => (
-							<option key={state.code} value={state.code}>
-								{state.name}
-							</option>
-						))}
-					</select>
-					<select
-						aria-label="Filtrar por serviço"
-						value={serviceFilter}
-						onChange={(event) => setServiceFilter(event.target.value)}
-					>
-						<option value="">Todos os serviços</option>
-						{SERVICE_TYPES.map((service) => (
-							<option key={service.id} value={service.id}>
-								{service.label}
-							</option>
-						))}
-					</select>
-					<p className="count">
-						{filtered.length} comunidade{filtered.length === 1 ? "" : "s"}
-					</p>
-					{error ? <p className="form-error">{error}</p> : null}
-					<ul className="community-list">
-						{filtered.map((community) => (
-							<li key={community.id}>
-								<Link
-									to={`/comunidade/${community.slug}`}
-									className={community.slug === slug ? "is-active" : ""}
-									onClick={() => {
-										if (isMobileMap()) setSidebarOpen(false);
-									}}
-								>
-									<strong>{community.name}</strong>
-									<span>
-										{community.city}, {community.state}
-									</span>
-								</Link>
-							</li>
-						))}
-					</ul>
-					<CoverageHighlights
-						communities={communities}
-						onNavigate={() => {
-							if (isMobileMap()) setSidebarOpen(false);
-						}}
-					/>
-				</aside>
-				<div className="map-stage">
-					{!sidebarOpen ? (
+					{searchFields}
+					<div className="locate-row">
 						<button
 							type="button"
-							className="map-list-toggle"
-							onClick={() => setSidebarOpen(true)}
+							className="secondary"
+							onClick={locateMe}
+							disabled={locating}
 						>
-							Mostrar menu
+							{locating ? "Localizando..." : "Perto de mim"}
 						</button>
+					</div>
+					{locateError ? <p className="form-error">{locateError}</p> : null}
+					<p className="count">
+						{loading
+							? "Carregando o mapa…"
+							: `${filtered.length} comunidade${filtered.length === 1 ? "" : "s"}`}
+					</p>
+					{error ? <p className="form-error">{error}</p> : null}
+					{loading ? (
+						<div className="list-skeleton" aria-hidden="true">
+							<span />
+							<span />
+							<span />
+						</div>
+					) : (
+						<ul className="community-list">
+							{filtered.map((community) => (
+								<li key={community.id}>
+									<Link
+										to={`/comunidade/${community.slug}`}
+										className={community.slug === slug ? "is-active" : ""}
+										onClick={() => {
+											if (isMobileMap()) setSidebarOpen(false);
+										}}
+									>
+										<strong>{community.name}</strong>
+										<span>
+											{origin
+												? `${formatDistanceKm(haversineKm(origin, community))} · `
+												: ""}
+											{community.city}, {community.state}
+											{community.sunday_masses.length > 0
+												? ` · Domingo ${community.sunday_masses.map(formatMassTime).join(", ")}`
+												: ""}
+										</span>
+									</Link>
+								</li>
+							))}
+						</ul>
+					)}
+					{!loading && filtered.length === 0 ? (
+						<p className="coverage-cta">
+							Nenhuma comunidade com esses filtros.{" "}
+							<Link to="/informe">Informe a sua</Link>
+						</p>
+					) : null}
+					{loading ? null : (
+						<CoverageHighlights
+							communities={communities}
+							origin={origin}
+							onNavigate={() => {
+								if (isMobileMap()) setSidebarOpen(false);
+							}}
+						/>
+					)}
+				</aside>
+				<div className="map-stage">
+					{!sidebarOpen && !selected ? (
+						<div className="map-search-bar">
+							<input
+								type="search"
+								placeholder="Cidade, ZIP ou nome"
+								aria-label="Buscar comunidade por nome, cidade ou endereço"
+								value={query}
+								onChange={(event) => setQuery(event.target.value)}
+							/>
+							<button
+								type="button"
+								className="secondary"
+								onClick={locateMe}
+								disabled={locating}
+							>
+								{locating ? "Localizando..." : "Perto de mim"}
+							</button>
+							<button type="button" onClick={() => setSidebarOpen(true)}>
+								Ver lista
+							</button>
+						</div>
+					) : null}
+					{locateError && !sidebarOpen ? (
+						<p className="map-locate-error">{locateError}</p>
 					) : null}
 					<MapView
 						communities={filtered}
 						selectedSlug={slug}
 						onSelect={selectCommunity}
 						layoutToken={sidebarOpen}
+						origin={origin}
+						originToken={originToken}
 					/>
 					{selected ? (
 						<>

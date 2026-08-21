@@ -25,7 +25,7 @@ export function Header({
 						onClick={onToggleMenu}
 						aria-expanded={menuOpen}
 					>
-						{menuOpen ? "Ocultar menu" : "Mostrar menu"}
+						{menuOpen ? "Fechar busca" : "Buscar comunidades"}
 					</button>
 				) : null}
 				<NavLink to="/" end>

@@ -1,8 +1,7 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
 	MASS_LANGUAGES,
 	SERVICE_TYPES,
-	US_CENTER,
 	US_STATES,
 	WEEKDAYS,
 } from "../../shared/constants";
@@ -12,7 +11,7 @@ import type {
 	CommunityStatus,
 	MassLanguage,
 } from "../../shared/types";
-import { geocodeAddress } from "../api";
+import { geocodeAddress, lookupZip } from "../api";
 import { PinPickerMap } from "./PinPickerMap";
 import { TurnstileWidget } from "./TurnstileWidget";
 
@@ -25,8 +24,8 @@ function communityToInput(community?: Community): CommunityInput {
 			city: "",
 			state: "",
 			zip: "",
-			lat: US_CENTER[0],
-			lng: US_CENTER[1],
+			lat: null,
+			lng: null,
 			website_url: "",
 			whatsapp: "",
 			whatsapp_group_url: "",
@@ -38,7 +37,9 @@ function communityToInput(community?: Community): CommunityInput {
 			submitted_by_email: "",
 			admin_notes: "",
 			status: "pending",
-			mass_schedules: [],
+			mass_schedules: [
+				{ day_of_week: 0, time: "11:00", language: "pt", notes: "" },
+			],
 			services: [{ service_type: "missa" }],
 		};
 	}
@@ -103,12 +104,99 @@ export function CommunityForm({
 	const [locateError, setLocateError] = useState<string | null>(null);
 	const [locating, setLocating] = useState(false);
 	const [focusToken, setFocusToken] = useState(0);
+	const [step, setStep] = useState(1);
+	const [stepError, setStepError] = useState<string | null>(null);
+	const [zipStatus, setZipStatus] = useState<string | null>(null);
+	const [zipBusy, setZipBusy] = useState(false);
+	const wizard = mode === "public";
+	const formRef = useRef(form);
+	formRef.current = form;
+	const zipTimer = useRef(0);
+	const zipRequest = useRef(0);
+
+	function showStep(value: number) {
+		return !wizard || step === value;
+	}
+
+	function goNext() {
+		if (step === 1) {
+			if (
+				!form.name.trim() ||
+				!form.address_line.trim() ||
+				!form.city.trim() ||
+				!form.state
+			) {
+				setStepError("Preencha nome, endereço, cidade e estado.");
+				return;
+			}
+		}
+		setStepError(null);
+		setStep((current) => Math.min(current + 1, 3));
+	}
 
 	function update<K extends keyof CommunityInput>(
 		key: K,
 		value: CommunityInput[K],
 	) {
 		setForm((current) => ({ ...current, [key]: value }));
+	}
+
+	useEffect(() => {
+		return () => window.clearTimeout(zipTimer.current);
+	}, []);
+
+	async function fillFromZip(zip: string) {
+		const requestId = ++zipRequest.current;
+		setZipBusy(true);
+		setZipStatus("Buscando CEP...");
+		setLocateError(null);
+		try {
+			const found = await lookupZip(zip);
+			if (requestId !== zipRequest.current) return;
+			const current = formRef.current;
+			const hasStreet = Boolean(current.address_line.trim());
+			setForm((prev) => ({
+				...prev,
+				city: found.city,
+				state: found.state,
+				lat: hasStreet ? prev.lat : found.lat,
+				lng: hasStreet ? prev.lng : found.lng,
+			}));
+			setZipStatus(`${found.city}, ${found.state}`);
+			if (hasStreet) {
+				try {
+					const pin = await geocodeAddress({
+						address_line: current.address_line,
+						city: found.city,
+						state: found.state,
+						zip: found.zip,
+					});
+					if (requestId !== zipRequest.current) return;
+					setForm((prev) => ({ ...prev, lat: pin.lat, lng: pin.lng }));
+				} catch {
+					setForm((prev) => ({ ...prev, lat: found.lat, lng: found.lng }));
+				}
+			}
+			setFocusToken((value) => value + 1);
+		} catch {
+			if (requestId !== zipRequest.current) return;
+			setZipStatus("CEP não encontrado. Confira os 5 dígitos.");
+		} finally {
+			if (requestId === zipRequest.current) setZipBusy(false);
+		}
+	}
+
+	function onZipChange(value: string) {
+		update("zip", value);
+		const zip = value.replace(/\D/g, "").slice(0, 5);
+		window.clearTimeout(zipTimer.current);
+		if (zip.length !== 5) {
+			setZipStatus(null);
+			return;
+		}
+		zipTimer.current = window.setTimeout(() => {
+			void fillFromZip(zip);
+		}, 400);
 	}
 
 	async function locate() {
@@ -183,11 +271,22 @@ export function CommunityForm({
 			}
 		>
 			{error ? <p className="form-error">{error}</p> : null}
+			{stepError ? <p className="form-error">{stepError}</p> : null}
 
+			{wizard ? (
+				<ol className="form-steps" aria-label="Etapas do cadastro">
+					<li className={step === 1 ? "is-active" : ""}>1. Onde</li>
+					<li className={step === 2 ? "is-active" : ""}>2. Quando</li>
+					<li className={step === 3 ? "is-active" : ""}>3. Contato</li>
+				</ol>
+			) : null}
+
+			{showStep(1) ? (
+			<>
 			<label>
 				Nome da comunidade
 				<input
-					required
+					required={!wizard || step === 1}
 					name="name"
 					toolparamdescription="Nome oficial da comunidade, paróquia ou apostolado"
 					value={form.name}
@@ -206,33 +305,59 @@ export function CommunityForm({
 				/>
 			</label>
 
+			<label>
+				Endereço
+				<input
+					required={!wizard || step === 1}
+					name="address_line"
+					toolparamdescription="Rua e número nos Estados Unidos"
+					value={form.address_line}
+					onChange={(event) => update("address_line", event.target.value)}
+				/>
+			</label>
+
+			<label>
+				CEP (ZIP code)
+				<input
+					name="zip"
+					inputMode="numeric"
+					autoComplete="postal-code"
+					placeholder="02145"
+					toolparamdescription="CEP americano (ZIP code) de 5 dígitos"
+					value={form.zip ?? ""}
+					onChange={(event) => onZipChange(event.target.value)}
+				/>
+				<span
+					className={`hint${
+						zipStatus?.includes("não encontrado")
+							? " form-error"
+							: zipStatus
+								? " form-ok"
+								: ""
+					}`}
+				>
+					{zipBusy
+						? "Buscando cidade e estado..."
+						: zipStatus
+							? zipStatus
+							: "Digite o ZIP de 5 dígitos para preencher cidade, estado e o mapa."}
+				</span>
+			</label>
+
 			<div className="grid-2">
-				<label>
-					Endereço
-					<input
-						required
-						name="address_line"
-						toolparamdescription="Rua e número nos Estados Unidos"
-						value={form.address_line}
-						onChange={(event) => update("address_line", event.target.value)}
-					/>
-				</label>
 				<label>
 					Cidade
 					<input
-						required
+						required={!wizard || step === 1}
 						name="city"
 						value={form.city}
 						onChange={(event) => update("city", event.target.value)}
 					/>
 				</label>
-			</div>
-
-			<div className="grid-2">
 				<label>
 					Estado
 					<select
-						required
+						required={!wizard || step === 1}
 						name="state"
 						toolparamdescription="Sigla do estado dos EUA, por exemplo FL, MA ou TX"
 						value={form.state}
@@ -245,15 +370,6 @@ export function CommunityForm({
 							</option>
 						))}
 					</select>
-				</label>
-				<label>
-					CEP
-					<input
-						name="zip"
-						toolparamdescription="CEP americano (ZIP code)"
-						value={form.zip ?? ""}
-						onChange={(event) => update("zip", event.target.value)}
-					/>
 				</label>
 			</div>
 
@@ -273,7 +389,11 @@ export function CommunityForm({
 					update("lng", lng);
 				}}
 			/>
+			</>
+			) : null}
 
+			{showStep(3) ? (
+			<>
 			<div className="grid-2">
 				<label>
 					Site
@@ -293,6 +413,7 @@ export function CommunityForm({
 						onChange={(event) => update("whatsapp", event.target.value)}
 						placeholder="15551234567"
 					/>
+					<span className="hint">DDI + número, só dígitos. Ex.: 15551234567</span>
 				</label>
 			</div>
 
@@ -345,7 +466,11 @@ export function CommunityForm({
 					/>
 				</label>
 			</div>
+			</>
+			) : null}
 
+			{showStep(2) ? (
+			<>
 			<fieldset>
 				<legend>Horários de missa</legend>
 				{form.mass_schedules.map((schedule, index) => (
@@ -457,13 +582,17 @@ export function CommunityForm({
 					))}
 				</div>
 			</fieldset>
+			</>
+			) : null}
 
+			{showStep(3) ? (
+			<>
 			{mode === "public" || mode === "correction" ? (
 				<div className="grid-2">
 					<label>
 						Seu nome
 						<input
-							required
+							required={!wizard || step === 3}
 							name="submitted_by_name"
 							toolparamdescription="Nome de quem está enviando o formulário"
 							value={form.submitted_by_name ?? ""}
@@ -475,7 +604,7 @@ export function CommunityForm({
 					<label>
 						Seu e-mail
 						<input
-							required
+							required={!wizard || step === 3}
 							type="email"
 							name="submitted_by_email"
 							toolparamdescription="E-mail de quem está enviando o formulário"
@@ -534,16 +663,42 @@ export function CommunityForm({
 					onToken={setToken}
 				/>
 			) : null}
+			</>
+			) : null}
 
-			<button type="submit" disabled={busy}>
-				{busy
-					? "Enviando..."
-					: mode === "correction"
-						? "Enviar correção"
-						: mode === "public"
-							? "Enviar para aprovação"
+			{wizard ? (
+				<div className="form-step-nav">
+					{step > 1 ? (
+						<button
+							type="button"
+							className="secondary"
+							onClick={() => {
+								setStepError(null);
+								setStep((current) => current - 1);
+							}}
+						>
+							Voltar
+						</button>
+					) : null}
+					{step < 3 ? (
+						<button type="button" onClick={goNext}>
+							Continuar
+						</button>
+					) : (
+						<button type="submit" disabled={busy}>
+							{busy ? "Enviando..." : "Enviar para aprovação"}
+						</button>
+					)}
+				</div>
+			) : (
+				<button type="submit" disabled={busy}>
+					{busy
+						? "Enviando..."
+						: mode === "correction"
+							? "Enviar correção"
 							: "Salvar comunidade"}
-			</button>
+				</button>
+			)}
 		</form>
 	);
 }

@@ -129,6 +129,7 @@ textarea {
 }
 
 .header-menu-toggle {
+  display: none;
   background: transparent;
   color: var(--gold-soft);
   border: 0;
@@ -181,21 +182,62 @@ textarea {
   padding: 0.35rem 0.65rem;
 }
 
-.map-list-toggle {
+.map-list-toggle,
+.map-search-bar {
   position: absolute;
-  top: 5.4rem;
+  top: 0.7rem;
   left: 0.7rem;
   z-index: 1000;
-  box-shadow: var(--shadow);
+}
+
+.map-search-bar {
+  right: 0.7rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  padding: 0.45rem;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+.map-search-bar input {
+  flex: 1 1 14rem;
+  margin: 0;
+  min-width: 0;
+}
+
+.map-search-bar button {
+  padding: 0.55rem 0.9rem;
+}
+
+.map-locate-error {
+  position: absolute;
+  top: 4.6rem;
+  left: 0.7rem;
+  z-index: 1000;
+  margin: 0;
+  padding: 0.45rem 0.7rem;
+  background: var(--paper);
+  border-radius: 10px;
+  color: var(--danger);
+  font-size: 0.88rem;
+  font-weight: 600;
 }
 
 .map-sidebar-title {
   font-family: var(--serif);
   color: var(--navy);
-  font-size: clamp(1.8rem, 3vw, 2.6rem);
-  line-height: 1.15;
-  margin: 0 0 0.4em;
+  font-size: 1.45rem;
+  line-height: 1.2;
+  margin: 0 0 0.35rem;
   font-weight: 700;
+}
+
+.map-sidebar-lead {
+  font-size: 0.92rem;
+  margin-bottom: 0.8rem;
 }
 
 .map-sidebar input,
@@ -255,6 +297,14 @@ textarea {
 .community-list a.is-active,
 .community-list a:hover {
   color: var(--navy);
+}
+
+.community-list a.is-active {
+  background: var(--cream);
+  margin: 0 -0.4rem;
+  padding-left: 0.6rem;
+  padding-right: 0.6rem;
+  border-radius: 10px;
 }
 
 .map-stage {
@@ -433,19 +483,114 @@ textarea {
   margin: 0.4rem 0 0;
 }
 
-.coverage-states {
-  margin-top: 1rem;
+.coverage-cta {
+  font-size: 0.9rem;
+  margin: 0.8rem 0 0;
 }
 
-.coverage-states summary {
-  cursor: pointer;
+.next-mass {
+  margin: 0 0 0.9rem;
+  padding: 0.75rem 0.85rem;
+  background: var(--cream);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.next-mass .eyebrow {
+  margin-bottom: 0.2rem;
+}
+
+.next-mass strong,
+.next-mass span,
+.next-mass em {
+  display: block;
+}
+
+.next-mass em {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin-top: 0.2rem;
+}
+
+.maps-cta {
+  display: block;
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.map-cluster {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.map-cluster span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--navy);
+  color: white;
+  font-weight: 700;
+  border: 3px solid var(--gold);
+}
+
+.list-skeleton {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0.6rem 0 1rem;
+}
+
+.list-skeleton span {
+  display: block;
+  height: 3rem;
+  border-radius: 10px;
+  background: var(--cream);
+}
+
+.pin-picker-empty {
+  display: flex;
+  align-items: center;
+  min-height: 140px;
+  padding: 0.9rem 1rem;
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  background: var(--cream);
+  margin-bottom: 0.8rem;
+}
+
+.pin-picker-empty .hint {
+  margin: 0;
+}
+
+.form-steps {
+  display: flex;
+  gap: 0.6rem;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1rem;
+  font-size: 0.88rem;
   font-weight: 600;
+  color: var(--muted);
+}
+
+.form-steps .is-active {
   color: var(--navy);
 }
 
-.coverage-states p {
-  margin: 0.6rem 0 0.5rem;
-  font-size: 0.9rem;
+.form-step-nav {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-top: 0.6rem;
+}
+
+.community-form .hint {
+  display: block;
+  font-weight: 500;
+  margin: -0.45rem 0 0.6rem;
 }
 
 .cookie-banner {
@@ -454,18 +599,18 @@ textarea {
   right: 1rem;
   bottom: calc(1rem + env(safe-area-inset-bottom));
   z-index: 1300;
-  max-width: 560px;
+  max-width: 420px;
   margin: 0 auto;
   background: var(--paper);
   border: 1px solid var(--line);
-  border-radius: 16px;
-  box-shadow: var(--shadow);
-  padding: 1rem 1.1rem;
+  border-radius: 14px;
+  padding: 0.75rem 0.9rem;
 }
 
 .cookie-banner p {
-  margin: 0 0 0.8rem;
+  margin: 0 0 0.65rem;
   color: var(--ink);
+  font-size: 0.9rem;
 }
 
 .cookie-banner-actions {
@@ -767,11 +912,11 @@ button.chip.is-active {
     right: 0;
     z-index: 1000;
     flex-direction: column;
+    overflow: auto;
     border-right: 0;
     border-bottom: 1px solid var(--line);
     padding: 0.9rem 1rem 0.7rem;
     max-height: min(72svh, 640px);
-    box-shadow: var(--shadow);
   }
 
   .map-layout.sidebar-open .map-sidebar {
@@ -780,7 +925,7 @@ button.chip.is-active {
 
   .map-sidebar h1,
   .map-sidebar-title {
-    font-size: 1.35rem;
+    font-size: 1.25rem;
   }
 
   .map-sidebar p {
@@ -788,19 +933,19 @@ button.chip.is-active {
     font-size: 0.92rem;
   }
 
-  .map-sidebar-head + p,
   .contact-line {
     display: none;
   }
 
   .header-menu-toggle {
+    display: inline-block;
     padding: 0.3rem 0.55rem;
     font-size: 0.9rem;
   }
 
   .community-list {
-    flex: 1;
-    overflow: auto;
+    flex: none;
+    overflow: visible;
     min-height: 0;
   }
 

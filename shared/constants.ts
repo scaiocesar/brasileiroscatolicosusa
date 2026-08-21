@@ -31,10 +31,8 @@ export function formatMassTime(time: string): string {
 	const hours24 = Number(match[1]);
 	const minutes = match[2];
 	if (hours24 > 23) return time;
-
-	const period = hours24 < 12 ? "AM" : "PM";
-	const hours12 = hours24 % 12 || 12;
-	return `${hours12}:${minutes} ${period}`;
+	if (minutes === "00") return `${hours24}h`;
+	return `${hours24}h${minutes}`;
 }
 
 export const MASS_LANGUAGES = [

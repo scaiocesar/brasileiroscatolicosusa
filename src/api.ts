@@ -50,6 +50,18 @@ export async function geocodeAddress(input: {
 	return response.json();
 }
 
+export async function lookupZip(zip: string): Promise<{
+	zip: string;
+	city: string;
+	state: string;
+	lat: number;
+	lng: number;
+}> {
+	const response = await fetch(`/api/zip/${encodeURIComponent(zip)}`);
+	if (!response.ok) throw new Error(await parseError(response));
+	return response.json();
+}
+
 export async function submitCommunity(
 	input: CommunityInput,
 ): Promise<{ ok: boolean; slug: string }> {

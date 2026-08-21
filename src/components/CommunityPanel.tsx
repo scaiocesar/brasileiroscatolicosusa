@@ -1,17 +1,19 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import {
-	MASS_LANGUAGES,
-	SERVICE_TYPES,
-	WEEKDAYS,
-	formatMassTime,
-} from "../../shared/constants";
+import { MASS_LANGUAGES, SERVICE_TYPES, formatMassTime } from "../../shared/constants";
 import type { Community } from "../../shared/types";
+import {
+	formatPhoneDisplay,
+	groupSchedulesByDay,
+	massLine,
+	nextMass,
+} from "../geo";
 import {
 	communityShareUrl,
 	externalUrl,
 	facebookUrl,
 	instagramUrl,
+	mapsDirectionsUrl,
 	mapsUrl,
 	whatsappGroupUrl,
 	whatsappShareUrl,
@@ -20,10 +22,6 @@ import {
 
 function serviceLabel(id: string): string {
 	return SERVICE_TYPES.find((item) => item.id === id)?.label ?? id;
-}
-
-function weekdayLabel(id: number): string {
-	return WEEKDAYS.find((item) => item.id === id)?.label ?? String(id);
 }
 
 function languageLabel(id: string): string {
@@ -47,9 +45,21 @@ export function CommunityPanel({
 		community.address_line,
 		community.city,
 		community.state,
+		community.zip,
 	);
+	const directions = mapsDirectionsUrl(community.lat, community.lng);
 	const shareUrl = communityShareUrl(community.slug);
 	const shareText = `${community.name} — missa em português em ${community.city}, ${community.state}\n${shareUrl}`;
+	const upcoming = nextMass(community.mass_schedules);
+	const grouped = groupSchedulesByDay(community.mass_schedules);
+	const services = community.services.filter((item) => {
+		if (item.service_type === "outros") return false;
+		if (item.service_type === "missa" && community.mass_schedules.length > 0) {
+			return false;
+		}
+		return true;
+	});
+	const phoneLabel = formatPhoneDisplay(community.phone);
 
 	async function copyLink() {
 		try {
@@ -77,6 +87,28 @@ export function CommunityPanel({
 			</div>
 			{community.description ? <p>{community.description}</p> : null}
 
+			{upcoming ? (
+				<div className="next-mass">
+					<p className="eyebrow">
+						{upcoming.language === "pt"
+							? "Próxima missa em português"
+							: "Próxima missa"}
+					</p>
+					<strong>{massLine(upcoming)}</strong>
+					<span>{languageLabel(upcoming.language)}</span>
+					{upcoming.notes ? <em>{upcoming.notes}</em> : null}
+				</div>
+			) : null}
+
+			<a
+				className="button-link maps-cta"
+				href={directions}
+				target="_blank"
+				rel="noreferrer"
+			>
+				Como chegar
+			</a>
+
 			<section>
 				<h3>Endereço</h3>
 				<p>
@@ -89,28 +121,30 @@ export function CommunityPanel({
 				</a>
 			</section>
 
-			{community.mass_schedules.length > 0 ? (
+			{grouped.length > 0 ? (
 				<section>
 					<h3>Horários de missa</h3>
 					<ul className="schedule-list">
-						{community.mass_schedules.map((item) => (
-							<li key={`${item.day_of_week}-${item.time}-${item.language}`}>
-								<strong>
-									{weekdayLabel(item.day_of_week)} · {formatMassTime(item.time)}
-								</strong>
-								<span>{languageLabel(item.language)}</span>
-								{item.notes ? <em>{item.notes}</em> : null}
-							</li>
-						))}
+						{grouped.map(({ day, items }) =>
+							items.map((item) => (
+								<li key={`${day.id}-${item.time}-${item.language}-${item.notes ?? ""}`}>
+									<strong>
+										{day.label} · {formatMassTime(item.time)}
+									</strong>
+									<span>{languageLabel(item.language)}</span>
+									{item.notes ? <em>{item.notes}</em> : null}
+								</li>
+							)),
+						)}
 					</ul>
 				</section>
 			) : null}
 
-			{community.services.length > 0 ? (
+			{services.length > 0 ? (
 				<section>
 					<h3>Serviços</h3>
 					<ul className="chip-list">
-						{community.services.map((item) => (
+						{services.map((item) => (
 							<li key={item.service_type}>
 								{serviceLabel(item.service_type)}
 								{item.notes ? ` — ${item.notes}` : ""}
@@ -151,7 +185,7 @@ export function CommunityPanel({
 					<a href={`mailto:${community.email}`}>{community.email}</a>
 				) : null}
 				{community.phone ? (
-					<a href={`tel:${community.phone}`}>{community.phone}</a>
+					<a href={`tel:${community.phone}`}>{phoneLabel || community.phone}</a>
 				) : null}
 			</section>
 

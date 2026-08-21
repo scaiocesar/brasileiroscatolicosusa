@@ -31,7 +31,7 @@ import {
 	updateCommunity,
 	validateInput,
 } from "./db";
-import { formatGeocodeQuery, geocodeAddress } from "./geocode";
+import { formatGeocodeQuery, geocodeAddress, lookupZip, normalizeUsZip } from "./geocode";
 import { applyHtmlSeo, withStatus } from "./seo";
 import { verifyTurnstile } from "./turnstile";
 import { csvRowsToInputs } from "../shared/csv";
@@ -224,6 +224,18 @@ app.post("/api/geocode", async (c) => {
 			{ error: "Não foi possível localizar o endereço. Ajuste o pin no mapa." },
 			404,
 		);
+	}
+	return c.json(found);
+});
+
+app.get("/api/zip/:zip", async (c) => {
+	const zip = normalizeUsZip(c.req.param("zip"));
+	if (!/^\d{5}$/.test(zip)) {
+		return c.json({ error: "Informe um ZIP americano de 5 dígitos." }, 400);
+	}
+	const found = await lookupZip(zip);
+	if (!found) {
+		return c.json({ error: "CEP não encontrado." }, 404);
 	}
 	return c.json(found);
 });

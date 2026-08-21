@@ -57,6 +57,17 @@ export function facebookUrl(value: string | null | undefined): string | null {
 	return `https://facebook.com/${trimmed}`;
 }
 
-export function mapsUrl(address: string, city: string, state: string): string {
-	return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${address}, ${city}, ${state}`)}`;
+export function mapsUrl(
+	address: string,
+	city: string,
+	state: string,
+	zip?: string | null,
+): string {
+	return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+		[address, city, state, zip].filter(Boolean).join(", "),
+	)}`;
+}
+
+export function mapsDirectionsUrl(lat: number, lng: number): string {
+	return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
 }

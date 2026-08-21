@@ -42,3 +42,41 @@ export function formatGeocodeQuery(input: {
 		.filter(Boolean)
 		.join(", ");
 }
+
+export function normalizeUsZip(value: string | null | undefined): string {
+	return (value ?? "").replace(/\D/g, "").slice(0, 5);
+}
+
+export async function lookupZip(zip: string): Promise<{
+	zip: string;
+	city: string;
+	state: string;
+	lat: number;
+	lng: number;
+} | null> {
+	const code = normalizeUsZip(zip);
+	if (!/^\d{5}$/.test(code)) return null;
+
+	const response = await fetch(`https://api.zippopotam.us/us/${code}`, {
+		headers: { Accept: "application/json" },
+	});
+	if (!response.ok) return null;
+
+	const data = (await response.json()) as {
+		places?: Array<{
+			"place name"?: string;
+			"state abbreviation"?: string;
+			latitude?: string;
+			longitude?: string;
+		}>;
+	};
+	const place = data.places?.[0];
+	const city = place?.["place name"]?.trim();
+	const state = place?.["state abbreviation"]?.trim().toUpperCase();
+	const lat = Number(place?.latitude);
+	const lng = Number(place?.longitude);
+	if (!city || !state || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+		return null;
+	}
+	return { zip: code, city, state, lat, lng };
+}

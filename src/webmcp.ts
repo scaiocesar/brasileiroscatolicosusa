@@ -20,7 +20,7 @@ export function filterMapCommunities(
 		if (state && community.state !== state) return false;
 		if (service && !community.services.includes(service)) return false;
 		if (!needle) return true;
-		return `${community.name} ${community.city} ${community.state}`
+		return `${community.name} ${community.city} ${community.state} ${community.address_line}`
 			.toLowerCase()
 			.includes(needle);
 	});

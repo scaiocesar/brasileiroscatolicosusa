@@ -38,8 +38,7 @@ export function CookieConsentBanner() {
 	return (
 		<div className="cookie-banner" role="dialog" aria-label="Consentimento de cookies">
 			<p>
-				Usamos cookies do Google Analytics para entender como o mapa é usado.
-				Você pode aceitar ou recusar.
+				Usamos cookies do Google Analytics para entender o uso do mapa.
 			</p>
 			<div className="cookie-banner-actions">
 				<button type="button" className="secondary" onClick={deny}>
