@@ -9,6 +9,7 @@ interface __BaseEnv_Env {
 	AUTH_SECRET: string;
 	TURNSTILE_SITE_KEY: string;
 	TURNSTILE_SECRET: string;
+	CARTO_API_KEY: string;
 }
 declare namespace Cloudflare {
 	interface GlobalProps {

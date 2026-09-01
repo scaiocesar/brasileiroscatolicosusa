@@ -144,6 +144,7 @@ app.get("/openapi.json", () => jsonPublic(openApiSpec()));
 app.get("/api/config", (c) => {
 	return c.json({
 		turnstileSiteKey: c.env.TURNSTILE_SITE_KEY ?? "",
+		cartoApiKey: c.env.CARTO_API_KEY ?? "",
 	});
 });
 

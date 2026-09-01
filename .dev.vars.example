@@ -3,3 +3,4 @@ ADMIN_PASSWORD=replace-with-a-long-random-password
 AUTH_SECRET=replace-with-a-long-random-string
 TURNSTILE_SITE_KEY=replace-with-your-turnstile-sitekey
 TURNSTILE_SECRET=replace-with-your-turnstile-secret
+CARTO_API_KEY=replace-with-your-carto-basemap-key

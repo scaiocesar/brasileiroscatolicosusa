@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from "react-leaflet";
+import { MapContainer, Marker, useMap, useMapEvents } from "react-leaflet";
+import { BasemapLayer } from "./BasemapLayer";
 import { pinIcon } from "./pinIcon";
 import "leaflet/dist/leaflet.css";
 
@@ -68,13 +69,11 @@ export function PinPickerMap({
 			<MapContainer
 				center={position}
 				zoom={13}
+				maxZoom={19}
 				className="pin-picker-map"
 				scrollWheelZoom
 			>
-				<TileLayer
-					attribution="&copy; OpenStreetMap &copy; CARTO"
-					url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-				/>
+				<BasemapLayer />
 				<ClickToPlace onChange={onChange} />
 				<Recenter lat={position[0]} lng={position[1]} token={focusToken} />
 				<Marker

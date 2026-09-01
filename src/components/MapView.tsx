@@ -1,9 +1,10 @@
 import { useEffect, useRef } from "react";
-import { MapContainer, TileLayer, ZoomControl, useMap } from "react-leaflet";
+import { MapContainer, ZoomControl, useMap } from "react-leaflet";
 import L from "leaflet";
 import { US_CENTER } from "../../shared/constants";
 import type { CommunitySummary } from "../../shared/types";
 import type { LatLng } from "../geo";
+import { BasemapLayer } from "./BasemapLayer";
 import { pinIcon } from "./pinIcon";
 import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster";
@@ -158,14 +159,12 @@ export function MapView({
 			center={US_CENTER}
 			zoom={4}
 			minZoom={3}
+			maxZoom={19}
 			className="map-canvas"
 			scrollWheelZoom
 			zoomControl={false}
 		>
-			<TileLayer
-				attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
-				url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-			/>
+			<BasemapLayer />
 			<ZoomControl position="bottomright" />
 			<InvalidateSize token={Boolean(layoutToken)} />
 			<FlyToOrigin origin={origin ?? null} token={originToken ?? 0} />

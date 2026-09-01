@@ -15,9 +15,12 @@ async function parseError(response: Response): Promise<string> {
 	}
 }
 
-export async function fetchConfig(): Promise<{ turnstileSiteKey: string }> {
+export async function fetchConfig(): Promise<{
+	turnstileSiteKey: string;
+	cartoApiKey: string;
+}> {
 	const response = await fetch("/api/config");
-	if (!response.ok) return { turnstileSiteKey: "" };
+	if (!response.ok) return { turnstileSiteKey: "", cartoApiKey: "" };
 	return response.json();
 }
 

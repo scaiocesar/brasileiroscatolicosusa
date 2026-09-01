@@ -26,7 +26,8 @@
 	],
 	"upload_source_maps": true,
 	"vars": {
-		"TURNSTILE_SITE_KEY": "0x4AAAAAAES8mfiaIh_2lxwC"
+		"TURNSTILE_SITE_KEY": "0x4AAAAAAES8mfiaIh_2lxwC",
+		"CARTO_API_KEY": "cb1_2qce_1_822b21356847b56f0051ce12"
 	},
 	"d1_databases": [
 		{
