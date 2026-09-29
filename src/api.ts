@@ -1,4 +1,5 @@
 import type {
+	AdminUser,
 	Community,
 	CommunityCorrection,
 	CommunityInput,
@@ -115,9 +116,87 @@ export async function adminLogout(): Promise<void> {
 	await fetch("/api/admin/logout", { method: "POST", credentials: "include" });
 }
 
-export async function adminMe(): Promise<boolean> {
+export async function adminMe(): Promise<{
+	authenticated: boolean;
+	username?: string;
+	id?: number;
+}> {
 	const response = await fetch("/api/admin/me", { credentials: "include" });
-	return response.ok;
+	if (!response.ok) return { authenticated: false };
+	return response.json();
+}
+
+export async function adminListUsers(): Promise<AdminUser[]> {
+	const response = await fetch("/api/admin/users", { credentials: "include" });
+	if (!response.ok) throw new Error(await parseError(response));
+	const data = (await response.json()) as { users: AdminUser[] };
+	return data.users;
+}
+
+export async function adminCreateUser(input: {
+	username: string;
+	display_name?: string | null;
+	password: string;
+}): Promise<AdminUser> {
+	const response = await fetch("/api/admin/users", {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		credentials: "include",
+		body: JSON.stringify(input),
+	});
+	if (!response.ok) throw new Error(await parseError(response));
+	const data = (await response.json()) as { user: AdminUser };
+	return data.user;
+}
+
+export async function adminUpdateUser(
+	id: number,
+	input: { username?: string; display_name?: string | null },
+): Promise<AdminUser> {
+	const response = await fetch(`/api/admin/users/${id}`, {
+		method: "PUT",
+		headers: { "Content-Type": "application/json" },
+		credentials: "include",
+		body: JSON.stringify(input),
+	});
+	if (!response.ok) throw new Error(await parseError(response));
+	const data = (await response.json()) as { user: AdminUser };
+	return data.user;
+}
+
+export async function adminBlockUser(id: number): Promise<AdminUser> {
+	const response = await fetch(`/api/admin/users/${id}/block`, {
+		method: "POST",
+		credentials: "include",
+	});
+	if (!response.ok) throw new Error(await parseError(response));
+	const data = (await response.json()) as { user: AdminUser };
+	return data.user;
+}
+
+export async function adminUnblockUser(id: number): Promise<AdminUser> {
+	const response = await fetch(`/api/admin/users/${id}/unblock`, {
+		method: "POST",
+		credentials: "include",
+	});
+	if (!response.ok) throw new Error(await parseError(response));
+	const data = (await response.json()) as { user: AdminUser };
+	return data.user;
+}
+
+export async function adminResetUserPassword(
+	id: number,
+	password: string,
+): Promise<AdminUser> {
+	const response = await fetch(`/api/admin/users/${id}/reset-password`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		credentials: "include",
+		body: JSON.stringify({ password }),
+	});
+	if (!response.ok) throw new Error(await parseError(response));
+	const data = (await response.json()) as { user: AdminUser };
+	return data.user;
 }
 
 export async function adminList(

@@ -9,6 +9,7 @@ import {
 import { trackPageView } from "./analytics";
 import { CookieConsentBanner } from "./components/CookieConsent";
 import { AdminPage } from "./pages/AdminPage";
+import { AdminUsersPage } from "./pages/AdminUsersPage";
 import { CorrectPage } from "./pages/CorrectPage";
 import { HomePage } from "./pages/HomePage";
 import { SubmitPage } from "./pages/SubmitPage";
@@ -76,6 +77,7 @@ export default function App() {
 				<Route path="/comunidade/:slug/corrigir" element={<CorrectPage />} />
 				<Route path="/informe" element={<SubmitPage />} />
 				<Route path="/admin" element={<AdminPage />} />
+				<Route path="/admin/usuarios" element={<AdminUsersPage />} />
 			</Routes>
 			<Analytics />
 			<CookieConsentBanner />

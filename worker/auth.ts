@@ -42,6 +42,22 @@ export async function secretsMatch(
 	return timingSafeEqual(left, right);
 }
 
+export async function hashPassword(
+	secret: string,
+	password: string,
+): Promise<string> {
+	return hmac(secret, password.normalize("NFC"));
+}
+
+export async function verifyPasswordHash(
+	secret: string,
+	password: string,
+	passwordHash: string,
+): Promise<boolean> {
+	const left = await hashPassword(secret, password);
+	return timingSafeEqual(left, passwordHash);
+}
+
 export async function createSessionToken(
 	secret: string,
 	username: string,
@@ -52,21 +68,30 @@ export async function createSessionToken(
 	return `${payload}.${signature}`;
 }
 
+export async function getSessionUsername(
+	secret: string | undefined,
+	token: string | undefined,
+): Promise<string | null> {
+	if (!secret || !token) return null;
+	const lastDot = token.lastIndexOf(".");
+	if (lastDot <= 0) return null;
+	const payload = token.slice(0, lastDot);
+	const signature = token.slice(lastDot + 1);
+	const expected = await hmac(secret, payload);
+	if (!timingSafeEqual(signature, expected)) return null;
+	const parts = payload.split(":");
+	if (parts[0] !== "v2" || parts.length < 4) return null;
+	const expiresAt = Number(parts[2]);
+	if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) return null;
+	const username = parts[1]?.trim();
+	return username || null;
+}
+
 export async function isValidSession(
 	secret: string | undefined,
 	token: string | undefined,
 ): Promise<boolean> {
-	if (!secret || !token) return false;
-	const lastDot = token.lastIndexOf(".");
-	if (lastDot <= 0) return false;
-	const payload = token.slice(0, lastDot);
-	const signature = token.slice(lastDot + 1);
-	const expected = await hmac(secret, payload);
-	if (!timingSafeEqual(signature, expected)) return false;
-	const parts = payload.split(":");
-	if (parts[0] !== "v2" || parts.length < 4) return false;
-	const expiresAt = Number(parts[2]);
-	return Number.isFinite(expiresAt) && expiresAt > Date.now();
+	return (await getSessionUsername(secret, token)) != null;
 }
 
 export function sessionCookie(token: string, secure: boolean): string {

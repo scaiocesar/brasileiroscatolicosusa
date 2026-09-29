@@ -1,5 +1,23 @@
 export type CommunityStatus = "pending" | "approved" | "rejected";
+export type AdminUserStatus = "active" | "blocked";
 export type MassLanguage = "pt" | "en" | "bilingual";
+
+export type AdminUser = {
+	id: number;
+	username: string;
+	display_name: string | null;
+	status: AdminUserStatus;
+	created_at: string;
+	updated_at: string;
+	last_login_at: string | null;
+};
+
+export type AdminUserInput = {
+	username: string;
+	display_name?: string | null;
+	password?: string;
+	status?: AdminUserStatus;
+};
 
 export type MassSchedule = {
 	id?: number;

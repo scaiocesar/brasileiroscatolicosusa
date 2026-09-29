@@ -18,6 +18,7 @@ import {
 	fetchConfig,
 } from "../api";
 import { CommunityForm } from "../components/CommunityForm";
+import { AdminNav } from "../components/AdminNav";
 import { Footer } from "../components/Footer";
 import { Header } from "../components/Header";
 import { TurnstileWidget } from "../components/TurnstileWidget";
@@ -104,9 +105,9 @@ export function AdminPage() {
 	useEffect(() => {
 		fetchConfig().then((config) => setSiteKey(config.turnstileSiteKey));
 		adminMe()
-			.then(async (ok) => {
-				setAuthed(ok);
-				if (ok) await load();
+			.then(async (me) => {
+				setAuthed(me.authenticated);
+				if (me.authenticated) await load();
 			})
 			.catch((err: unknown) => setError(String(err)));
 	}, []);
@@ -336,6 +337,8 @@ export function AdminPage() {
 						</button>
 					</div>
 				</div>
+
+				<AdminNav />
 
 				<div className="filter-row">
 					{FILTERS.map((item) => (

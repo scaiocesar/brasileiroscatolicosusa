@@ -6,15 +6,27 @@ import {
 	clientIp,
 	createSessionToken,
 	getLockout,
+	getSessionUsername,
 	isJsonRequest,
 	isSameOrigin,
-	isValidSession,
 	readCookie,
 	recordLoginFailure,
 	recordLoginSuccess,
 	secretsMatch,
 	sessionCookie,
+	verifyPasswordHash,
 } from "./auth";
+import {
+	countAdmins,
+	createAdmin,
+	ensureBootstrapAdmin,
+	getAdminByUsername,
+	listAdmins,
+	resetAdminPassword,
+	setAdminStatus,
+	touchAdminLogin,
+	updateAdmin,
+} from "./admins";
 import {
 	createCommunity,
 	deleteCommunities,
@@ -76,10 +88,25 @@ function isSecureRequest(request: Request): boolean {
 	return new URL(request.url).protocol === "https:";
 }
 
-async function requireAdmin(c: Context<{ Bindings: Env }>): Promise<boolean> {
-	if (!isSameOrigin(c.req.raw) && c.req.method !== "GET") return false;
+async function requireAdmin(
+	c: Context<{ Bindings: Env }>,
+): Promise<{ id: number; username: string } | null> {
+	if (!isSameOrigin(c.req.raw) && c.req.method !== "GET") return null;
+	if (!c.env.AUTH_SECRET) return null;
 	const token = readCookie(c.req.raw.headers.get("Cookie"));
-	return isValidSession(c.env.AUTH_SECRET, token);
+	const username = await getSessionUsername(c.env.AUTH_SECRET, token);
+	if (!username) return null;
+
+	await ensureBootstrapAdmin(
+		c.env.DB,
+		c.env.AUTH_SECRET,
+		c.env.ADMIN_USERNAME,
+		c.env.ADMIN_PASSWORD,
+	);
+
+	const admin = await getAdminByUsername(c.env.DB, username);
+	if (!admin || admin.status !== "active") return null;
+	return { id: admin.id, username: admin.username };
 }
 
 app.use("*", async (c, next) => {
@@ -278,7 +305,7 @@ app.post("/api/admin/login", async (c) => {
 	if (!isSameOrigin(c.req.raw) || !isJsonRequest(c.req.raw)) {
 		return c.json({ error: "Não autorizado." }, 403);
 	}
-	if (!c.env.ADMIN_USERNAME || !c.env.ADMIN_PASSWORD || !c.env.AUTH_SECRET) {
+	if (!c.env.AUTH_SECRET) {
 		return c.json({ error: "Administração ainda não configurada." }, 500);
 	}
 
@@ -310,26 +337,59 @@ app.post("/api/admin/login", async (c) => {
 		return c.json({ error: "Falha na verificação anti-spam. Tente novamente." }, 400);
 	}
 
-	const usernameOk = await secretsMatch(
+	const username = body?.username?.trim() ?? "";
+	const password = body?.password ?? "";
+
+	await ensureBootstrapAdmin(
+		c.env.DB,
 		c.env.AUTH_SECRET,
-		body?.username?.trim() ?? "",
 		c.env.ADMIN_USERNAME,
-	);
-	const passwordOk = await secretsMatch(
-		c.env.AUTH_SECRET,
-		body?.password ?? "",
 		c.env.ADMIN_PASSWORD,
 	);
 
-	if (!usernameOk || !passwordOk) {
+	let admin = await getAdminByUsername(c.env.DB, username);
+
+	// Fallback: se ainda não houver admins no banco, aceita o usuário das secrets.
+	if (!admin && (await countAdmins(c.env.DB)) === 0) {
+		const usernameOk = await secretsMatch(
+			c.env.AUTH_SECRET,
+			username,
+			c.env.ADMIN_USERNAME ?? "",
+		);
+		const passwordOk = await secretsMatch(
+			c.env.AUTH_SECRET,
+			password,
+			c.env.ADMIN_PASSWORD ?? "",
+		);
+		if (usernameOk && passwordOk) {
+			admin = await ensureBootstrapAdmin(
+				c.env.DB,
+				c.env.AUTH_SECRET,
+				c.env.ADMIN_USERNAME,
+				c.env.ADMIN_PASSWORD,
+			);
+		}
+	}
+
+	const passwordOk =
+		admin != null &&
+		(await verifyPasswordHash(c.env.AUTH_SECRET, password, admin.password_hash));
+
+	if (!admin || !passwordOk) {
 		await recordLoginFailure(c.env.DB, ip);
 		return c.json({ error: "Usuário ou senha inválidos." }, 401);
 	}
 
+	if (admin.status === "blocked") {
+		await recordLoginFailure(c.env.DB, ip);
+		return c.json({ error: "Este usuário está bloqueado." }, 403);
+	}
+
 	await recordLoginSuccess(c.env.DB, ip);
-	const token = await createSessionToken(c.env.AUTH_SECRET, c.env.ADMIN_USERNAME);
+	await touchAdminLogin(c.env.DB, admin.id);
+	const token = await createSessionToken(c.env.AUTH_SECRET, admin.username);
 	return c.json(
-		{ ok: true },
+		{ ok: true, username: admin.username },
 		{
 			headers: {
 				"Set-Cookie": sessionCookie(token, isSecureRequest(c.req.raw)),
@@ -350,8 +410,147 @@ app.post("/api/admin/logout", (c) => {
 });
 
 app.get("/api/admin/me", async (c) => {
-	const ok = await requireAdmin(c);
-	return c.json({ authenticated: ok }, ok ? 200 : 401);
+	const session = await requireAdmin(c);
+	if (!session) return c.json({ authenticated: false }, 401);
+	return c.json({
+		authenticated: true,
+		username: session.username,
+		id: session.id,
+	});
+});
+
+app.get("/api/admin/users", async (c) => {
+	if (!(await requireAdmin(c))) return c.json({ error: "Não autorizado." }, 401);
+	const users = await listAdmins(c.env.DB);
+	return c.json({ users });
+});
+
+app.post("/api/admin/users", async (c) => {
+	if (!(await requireAdmin(c))) return c.json({ error: "Não autorizado." }, 401);
+	if (!isSameOrigin(c.req.raw) || !isJsonRequest(c.req.raw)) {
+		return c.json({ error: "Não autorizado." }, 403);
+	}
+	const body = (await c.req.json().catch(() => null)) as {
+		username?: string;
+		display_name?: string | null;
+		password?: string;
+	} | null;
+	if (!body?.username?.trim() || !body.password) {
+		return c.json({ error: "Informe usuário e senha." }, 400);
+	}
+	try {
+		const user = await createAdmin(c.env.DB, {
+			username: body.username,
+			display_name: body.display_name,
+			password: body.password,
+			authSecret: c.env.AUTH_SECRET!,
+		});
+		return c.json({ user }, 201);
+	} catch (err) {
+		return c.json(
+			{ error: err instanceof Error ? err.message : "Não foi possível criar." },
+			400,
+		);
+	}
+});
+
+app.put("/api/admin/users/:id", async (c) => {
+	const session = await requireAdmin(c);
+	if (!session) return c.json({ error: "Não autorizado." }, 401);
+	if (!isSameOrigin(c.req.raw) || !isJsonRequest(c.req.raw)) {
+		return c.json({ error: "Não autorizado." }, 403);
+	}
+	const id = Number(c.req.param("id"));
+	const body = (await c.req.json().catch(() => null)) as {
+		username?: string;
+		display_name?: string | null;
+	} | null;
+	if (!body) return c.json({ error: "Dados inválidos." }, 400);
+	try {
+		const user = await updateAdmin(c.env.DB, id, {
+			username: body.username,
+			display_name: body.display_name,
+		});
+		if (!user) return c.json({ error: "Usuário não encontrado." }, 404);
+		return c.json({ user });
+	} catch (err) {
+		return c.json(
+			{ error: err instanceof Error ? err.message : "Não foi possível salvar." },
+			400,
+		);
+	}
+});
+
+app.post("/api/admin/users/:id/block", async (c) => {
+	const session = await requireAdmin(c);
+	if (!session) return c.json({ error: "Não autorizado." }, 401);
+	const id = Number(c.req.param("id"));
+	if (session.id === id) {
+		return c.json({ error: "Você não pode bloquear a si mesmo." }, 400);
+	}
+	try {
+		const user = await setAdminStatus(c.env.DB, id, "blocked");
+		if (!user) return c.json({ error: "Usuário não encontrado." }, 404);
+		return c.json({ user });
+	} catch (err) {
+		return c.json(
+			{
+				error:
+					err instanceof Error ? err.message : "Não foi possível bloquear.",
+			},
+			400,
+		);
+	}
+});
+
+app.post("/api/admin/users/:id/unblock", async (c) => {
+	if (!(await requireAdmin(c))) return c.json({ error: "Não autorizado." }, 401);
+	const id = Number(c.req.param("id"));
+	try {
+		const user = await setAdminStatus(c.env.DB, id, "active");
+		if (!user) return c.json({ error: "Usuário não encontrado." }, 404);
+		return c.json({ user });
+	} catch (err) {
+		return c.json(
+			{
+				error:
+					err instanceof Error ? err.message : "Não foi possível desbloquear.",
+			},
+			400,
+		);
+	}
+});
+
+app.post("/api/admin/users/:id/reset-password", async (c) => {
+	if (!(await requireAdmin(c))) return c.json({ error: "Não autorizado." }, 401);
+	if (!isSameOrigin(c.req.raw) || !isJsonRequest(c.req.raw)) {
+		return c.json({ error: "Não autorizado." }, 403);
+	}
+	const id = Number(c.req.param("id"));
+	const body = (await c.req.json().catch(() => null)) as {
+		password?: string;
+	} | null;
+	if (!body?.password) {
+		return c.json({ error: "Informe a nova senha." }, 400);
+	}
+	try {
+		const user = await resetAdminPassword(
+			c.env.DB,
+			id,
+			body.password,
+			c.env.AUTH_SECRET!,
+		);
+		if (!user) return c.json({ error: "Usuário não encontrado." }, 404);
+		return c.json({ user });
+	} catch (err) {
+		return c.json(
+			{
+				error:
+					err instanceof Error ? err.message : "Não foi possível resetar a senha.",
+			},
+			400,
+		);
+	}
 });
 
 app.get("/api/admin/communities", async (c) => {

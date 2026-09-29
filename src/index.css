@@ -867,6 +867,51 @@ button.chip.is-active {
   margin-bottom: 1rem;
 }
 
+.admin-nav {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin: 0 0 1.1rem;
+}
+
+.admin-nav a {
+  color: var(--navy);
+  text-decoration: none;
+  font-weight: 600;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+}
+
+.admin-nav a:hover {
+  border-color: var(--navy);
+}
+
+.admin-nav a.active {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: white;
+}
+
+.stack-form {
+  display: grid;
+  gap: 0.85rem;
+  max-width: 420px;
+}
+
+.panel-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 1.1rem 1.2rem;
+}
+
+.panel-card h2 {
+  margin: 0 0 0.9rem;
+  font-size: 1.15rem;
+}
+
 .admin-list {
   list-style: none;
   padding: 0;

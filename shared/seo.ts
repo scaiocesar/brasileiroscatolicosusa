@@ -71,6 +71,16 @@ export function adminSeo(): SeoDocument {
 	};
 }
 
+export function adminUsersSeo(): SeoDocument {
+	return {
+		title: "Usuários admin | Brasileiros Católicos nos EUA",
+		description: DEFAULT_DESCRIPTION,
+		canonical: canonicalUrl("/admin/usuarios"),
+		robots: "noindex, nofollow",
+		jsonLd: graph([websiteNode(), organizationNode()]),
+	};
+}
+
 export function correctionSeo(community: Community): SeoDocument {
 	const path = `/comunidade/${community.slug}/corrigir`;
 	return {
@@ -117,6 +127,7 @@ export function seoForPath(
 ): SeoDocument {
 	const path = pathname.replace(/\/+$/, "") || "/";
 	if (path === "/informe") return submitSeo();
+	if (path === "/admin/usuarios") return adminUsersSeo();
 	if (path === "/admin" || path.startsWith("/admin/")) return adminSeo();
 	const correctionPath = path.match(/^\/comunidade\/([^/]+)\/corrigir$/);
 	if (correctionPath) {
