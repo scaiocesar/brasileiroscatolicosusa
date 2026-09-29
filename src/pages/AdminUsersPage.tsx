@@ -226,6 +226,11 @@ export function AdminUsersPage() {
 				{editing ? (
 					<section className="editor-card panel-card">
 						<h2>{editing === "new" ? "Cadastrar usuário" : "Editar usuário"}</h2>
+						<p className="panel-lead">
+							{editing === "new"
+								? "Crie um acesso ao painel. A senha precisa ter pelo menos 8 caracteres."
+								: "Atualize o usuário e o nome de exibição. Para trocar a senha, use Resetar senha."}
+						</p>
 						<form className="stack-form" onSubmit={handleSave}>
 							<label>
 								Usuário
@@ -236,7 +241,9 @@ export function AdminUsersPage() {
 									minLength={3}
 									maxLength={40}
 									autoComplete="off"
+									placeholder="ex.: maria.silva"
 								/>
+								<span className="field-hint">3–40 caracteres: letras, números, . _ -</span>
 							</label>
 							<label>
 								Nome de exibição
@@ -244,6 +251,7 @@ export function AdminUsersPage() {
 									value={displayName}
 									onChange={(e) => setDisplayName(e.target.value)}
 									maxLength={80}
+									placeholder="Opcional"
 								/>
 							</label>
 							{editing === "new" ? (
@@ -290,7 +298,10 @@ export function AdminUsersPage() {
 
 				{resetting ? (
 					<section className="editor-card panel-card">
-						<h2>Resetar senha — {resetting.username}</h2>
+						<h2>Resetar senha</h2>
+						<p className="panel-lead">
+							Defina uma nova senha para <strong>{resetting.username}</strong>.
+						</p>
 						<form className="stack-form" onSubmit={handleReset}>
 							<label>
 								Nova senha
@@ -302,6 +313,7 @@ export function AdminUsersPage() {
 									minLength={8}
 									autoComplete="new-password"
 								/>
+								<span className="field-hint">Mínimo de 8 caracteres</span>
 							</label>
 							<label>
 								Confirmar nova senha
@@ -333,13 +345,21 @@ export function AdminUsersPage() {
 				<ul className="admin-list">
 					{users.map((user) => (
 						<li key={user.id}>
-							<div>
+							<div className="admin-user-meta">
 								<strong>{user.username}</strong>
-								<span>
-									{user.display_name || "Sem nome de exibição"} ·{" "}
-									{user.status === "blocked" ? "Bloqueado" : "Ativo"}
-									{currentId === user.id ? " · você" : ""}
-								</span>
+								<div className="user-line">
+									<span
+										className={
+											user.status === "blocked"
+												? "admin-status is-blocked"
+												: "admin-status is-active"
+										}
+									>
+										{user.status === "blocked" ? "Bloqueado" : "Ativo"}
+									</span>
+									<span>{user.display_name || "Sem nome de exibição"}</span>
+									{currentId === user.id ? <span>· você</span> : null}
+								</div>
 								<small>
 									Criado: {formatDate(user.created_at)} · Último login:{" "}
 									{formatDate(user.last_login_at)}

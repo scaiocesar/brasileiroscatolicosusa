@@ -6,7 +6,7 @@ import {
 	useLocation,
 	useNavigate,
 } from "react-router-dom";
-import { trackPageView } from "./analytics";
+import { initGoogleAnalytics, trackPageView } from "./analytics";
 import { CookieConsentBanner } from "./components/CookieConsent";
 import { AdminPage } from "./pages/AdminPage";
 import { AdminUsersPage } from "./pages/AdminUsersPage";
@@ -17,6 +17,9 @@ import { useWebMcpTools, type WebMcpTool } from "./useWebMcpTools";
 
 function Analytics() {
 	const location = useLocation();
+	useEffect(() => {
+		initGoogleAnalytics();
+	}, []);
 	useEffect(() => {
 		trackPageView(location.pathname + location.search, document.title);
 	}, [location]);

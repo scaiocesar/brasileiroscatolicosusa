@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import {
+	denyAnalyticsConsent,
 	getCookieConsent,
-	loadGoogleAnalytics,
-	setCookieConsent,
+	grantAnalyticsConsent,
+	initGoogleAnalytics,
 	trackPageView,
 } from "../analytics";
 
@@ -10,17 +11,13 @@ export function CookieConsentBanner() {
 	const [visible, setVisible] = useState(false);
 
 	useEffect(() => {
+		initGoogleAnalytics();
 		const consent = getCookieConsent();
-		if (consent === "accepted") {
-			loadGoogleAnalytics();
-			return;
-		}
 		if (!consent) setVisible(true);
 	}, []);
 
 	function accept() {
-		setCookieConsent("accepted");
-		loadGoogleAnalytics();
+		grantAnalyticsConsent();
 		trackPageView(
 			window.location.pathname + window.location.search,
 			document.title,
@@ -29,7 +26,7 @@ export function CookieConsentBanner() {
 	}
 
 	function deny() {
-		setCookieConsent("denied");
+		denyAnalyticsConsent();
 		setVisible(false);
 	}
 

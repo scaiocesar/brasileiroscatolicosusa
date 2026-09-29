@@ -896,25 +896,69 @@ button.chip.is-active {
 
 .stack-form {
   display: grid;
-  gap: 0.85rem;
-  max-width: 420px;
+  gap: 1rem;
+  max-width: 34rem;
+}
+
+.stack-form label {
+  display: grid;
+  gap: 0.4rem;
+  font-weight: 600;
+  color: var(--navy);
+}
+
+.stack-form input {
+  width: 100%;
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: white;
+  color: var(--ink);
+}
+
+.stack-form input:focus {
+  outline: 2px solid color-mix(in srgb, var(--gold) 55%, var(--navy));
+  outline-offset: 1px;
+  border-color: var(--navy);
+}
+
+.stack-form .field-hint {
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.stack-form .row-actions {
+  margin-top: 0.35rem;
+  padding-top: 0.35rem;
 }
 
 .panel-card {
   background: var(--paper);
   border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 1.1rem 1.2rem;
+  border-radius: 18px;
+  padding: 1.35rem 1.4rem 1.45rem;
+  box-shadow: var(--shadow);
+  margin-bottom: 1.25rem;
+  max-width: 40rem;
 }
 
 .panel-card h2 {
-  margin: 0 0 0.9rem;
-  font-size: 1.15rem;
+  margin: 0 0 0.35rem;
+  font-size: 1.45rem;
+}
+
+.panel-card .panel-lead {
+  margin: 0 0 1.15rem;
+  font-size: 0.95rem;
 }
 
 .admin-list {
   list-style: none;
   padding: 0;
+  margin: 0;
 }
 
 .admin-list li {
@@ -923,10 +967,59 @@ button.chip.is-active {
   gap: 1rem;
   background: var(--paper);
   border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 1rem;
-  margin-bottom: 0.7rem;
-  align-items: flex-start;
+  border-radius: 16px;
+  padding: 1.05rem 1.15rem;
+  margin-bottom: 0.75rem;
+  align-items: center;
+  box-shadow: 0 8px 20px rgba(16, 24, 44, 0.05);
+}
+
+.admin-user-meta {
+  min-width: 0;
+  flex: 1;
+}
+
+.admin-user-meta strong {
+  display: block;
+  color: var(--navy);
+  font-size: 1.08rem;
+}
+
+.admin-user-meta .user-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+  margin: 0.3rem 0 0.25rem;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.admin-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.admin-status.is-active {
+  background: color-mix(in srgb, var(--ok) 14%, white);
+  color: var(--ok);
+}
+
+.admin-status.is-blocked {
+  background: color-mix(in srgb, var(--danger) 12%, white);
+  color: var(--danger);
+}
+
+.admin-user-meta small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.84rem;
 }
 
 .admin-pick {
@@ -955,22 +1048,24 @@ button.chip.is-active {
   border-radius: 14px;
 }
 
-.admin-list span,
-.admin-list small {
-  display: block;
-  color: var(--muted);
-}
-
 .editor-card {
   margin-bottom: 1.5rem;
 }
 
 @media (max-width: 900px) {
   .grid-2,
-  .schedule-row,
-  .admin-list li {
+  .schedule-row {
     grid-template-columns: 1fr;
     display: block;
+  }
+
+  .admin-list li {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-list .row-actions {
+    justify-content: flex-start;
   }
 
   .site-header {
