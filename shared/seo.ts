@@ -3,6 +3,8 @@ import type { Community } from "./types";
 export const SITE_ORIGIN = "https://brasileiroscatolicosusa.org";
 export const SITE_NAME = "Brasileiros Católicos nos EUA";
 export const SITE_EMAIL = "contato@brasileiroscatolicosusa.org";
+export const APOSTOLADO_NAME = "Apostolado Brasileiro";
+export const APOSTOLADO_URL = "https://apostoladobrasileiro.com/";
 export const GA_MEASUREMENT_ID = "G-FJ1GE5Q58M";
 export const OG_IMAGE_PATH = "/og-image.png";
 export const OG_IMAGE_WIDTH = 1200;
@@ -229,6 +231,11 @@ function organizationNode(): Record<string, unknown> {
 			email: SITE_EMAIL,
 			contactType: "customer support",
 			availableLanguage: ["Portuguese", "English"],
+		},
+		sponsor: {
+			"@type": "Organization",
+			name: APOSTOLADO_NAME,
+			url: APOSTOLADO_URL,
 		},
 	};
 }

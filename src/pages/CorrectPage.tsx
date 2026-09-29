@@ -4,6 +4,7 @@ import { SITE_EMAIL, correctionSeo, notFoundSeo } from "../../shared/seo";
 import type { Community, CommunityInput } from "../../shared/types";
 import { fetchCommunity, fetchConfig, submitCorrection } from "../api";
 import { CommunityForm } from "../components/CommunityForm";
+import { Footer } from "../components/Footer";
 import { Header } from "../components/Header";
 import { usePageSeo } from "../usePageSeo";
 
@@ -91,6 +92,7 @@ export function CorrectPage() {
 					/>
 				)}
 			</main>
+			<Footer />
 		</div>
 	);
 }

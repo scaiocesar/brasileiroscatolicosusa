@@ -8,6 +8,8 @@ import {
 import {
 	canonicalUrl,
 	DEFAULT_DESCRIPTION,
+	APOSTOLADO_NAME,
+	APOSTOLADO_URL,
 	SITE_EMAIL,
 	SITE_NAME,
 	SITE_ORIGIN,
@@ -87,6 +89,7 @@ export function buildLlmsTxt(communities: CommunitySummary[]): string {
 Este diretório lista comunidades católicas brasileiras nos Estados Unidos (paróquias, missas em português, catequese e sacramentos). O conteúdo público está em português do Brasil. Páginas HTML têm versão Markdown no mesmo caminho com \`.md\`. Dados pessoais de quem cadastrou a comunidade não são publicados.
 
 Contato: ${SITE_EMAIL}
+Parceria: ${APOSTOLADO_NAME} (${APOSTOLADO_URL})
 
 Como usar:
 

@@ -528,6 +528,20 @@ function uniqueIds(ids: number[]): number[] {
 	return [...new Set(ids.filter((id) => Number.isInteger(id) && id > 0))];
 }
 
+export async function listCommunitiesByIds(
+	db: D1Database,
+	ids: number[],
+): Promise<Community[]> {
+	const list = uniqueIds(ids);
+	if (list.length === 0) return [];
+	const placeholders = list.map(() => "?").join(", ");
+	const rows = await db
+		.prepare(`SELECT * FROM communities WHERE id IN (${placeholders})`)
+		.bind(...list)
+		.all<CommunityRow>();
+	return attachRelated(db, rows.results ?? []);
+}
+
 export async function setStatusMany(
 	db: D1Database,
 	ids: number[],

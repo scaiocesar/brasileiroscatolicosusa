@@ -18,8 +18,13 @@ import {
 	fetchConfig,
 } from "../api";
 import { CommunityForm } from "../components/CommunityForm";
+import { Footer } from "../components/Footer";
 import { Header } from "../components/Header";
 import { TurnstileWidget } from "../components/TurnstileWidget";
+import {
+	defaultCommunitiesExportFileName,
+	downloadCommunitiesExcel,
+} from "../../shared/exportExcel";
 
 const FILTERS: Array<{ id: "" | CommunityStatus; label: string }> = [
 	{ id: "", label: "Todas" },
@@ -85,6 +90,7 @@ export function AdminPage() {
 	const [reviewing, setReviewing] = useState<CommunityCorrection | null>(null);
 	const [selected, setSelected] = useState<number[]>([]);
 	const [batchBusy, setBatchBusy] = useState(false);
+	const [exporting, setExporting] = useState(false);
 
 	async function load(nextFilter = filter) {
 		const [list, pendingCorrections] = await Promise.all([
@@ -223,6 +229,7 @@ export function AdminPage() {
 				<main className="page-main">
 					<p>Carregando...</p>
 				</main>
+				<Footer />
 			</div>
 		);
 	}
@@ -259,6 +266,7 @@ export function AdminPage() {
 						<button type="submit">Entrar</button>
 					</form>
 				</main>
+				<Footer />
 			</div>
 		);
 	}
@@ -273,6 +281,30 @@ export function AdminPage() {
 						<h1>Gerenciar comunidades</h1>
 					</div>
 					<div className="admin-actions">
+						<button
+							type="button"
+							className="secondary"
+							disabled={exporting || communities.length === 0}
+							onClick={async () => {
+								setExporting(true);
+								setError(null);
+								try {
+									await downloadCommunitiesExcel(communities, {
+										fileName: defaultCommunitiesExportFileName(filter),
+									});
+								} catch (err) {
+									setError(
+										err instanceof Error
+											? err.message
+											: "Não foi possível exportar o Excel.",
+									);
+								} finally {
+									setExporting(false);
+								}
+							}}
+						>
+							{exporting ? "Exportando..." : "Exportar Excel"}
+						</button>
 						<label className="file-button">
 							<input
 								type="file"
@@ -304,11 +336,6 @@ export function AdminPage() {
 						</button>
 					</div>
 				</div>
-				<p className="hint">
-					Importar CSV cria cadastros pendentes para revisão. O arquivo
-					<code> data/apostolado-comunidades.csv</code> veio do diretório
-					público do Apostolado Brasileiro.
-				</p>
 
 				<div className="filter-row">
 					{FILTERS.map((item) => (
@@ -564,6 +591,7 @@ export function AdminPage() {
 					))}
 				</ul>
 			</main>
+			<Footer />
 		</div>
 	);
 }

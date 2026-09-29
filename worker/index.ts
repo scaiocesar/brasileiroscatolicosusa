@@ -24,6 +24,7 @@ import {
 	listAdminCommunities,
 	listApprovedDetailed,
 	listApprovedSitemap,
+	listCommunitiesByIds,
 	listSummaries,
 	resolveCoordinates,
 	setStatus,
@@ -33,6 +34,7 @@ import {
 } from "./db";
 import { formatGeocodeQuery, geocodeAddress, lookupZip, normalizeUsZip } from "./geocode";
 import { applyHtmlSeo, withStatus } from "./seo";
+import { queueApprovalEmail, queueApprovalEmails } from "./mail";
 import { verifyTurnstile } from "./turnstile";
 import { csvRowsToInputs } from "../shared/csv";
 import {
@@ -384,6 +386,7 @@ app.post("/api/admin/communities", async (c) => {
 		coords,
 		input.status ?? "approved",
 	);
+	if (community.status === "approved") queueApprovalEmail(c, community);
 	return c.json({ community }, 201);
 });
 
@@ -463,11 +466,18 @@ app.post("/api/admin/communities/batch", async (c) => {
 	}
 
 	if (action === "approve" || action === "reject") {
+		const pending =
+			action === "approve"
+				? (await listCommunitiesByIds(c.env.DB, unique)).filter(
+						(community) => community.status !== "approved",
+					)
+				: [];
 		const updated = await setStatusMany(
 			c.env.DB,
 			unique,
 			action === "approve" ? "approved" : "rejected",
 		);
+		if (action === "approve") queueApprovalEmails(c, pending);
 		return c.json({ ok: true, updated, deleted: 0 });
 	}
 	if (action === "delete") {
@@ -487,24 +497,28 @@ app.put("/api/admin/communities/:id", async (c) => {
 	if (!coords) {
 		return c.json({ error: "Informe ou localise a posição no mapa." }, 400);
 	}
+	const existing = await getCommunity(c.env.DB, c.req.param("id"), true);
+	if (!existing) return c.json({ error: "Comunidade não encontrada." }, 404);
 	const community = await updateCommunity(
 		c.env.DB,
-		Number(c.req.param("id")),
+		existing.id,
 		input,
 		coords,
 	);
 	if (!community) return c.json({ error: "Comunidade não encontrada." }, 404);
+	if (existing.status !== "approved" && community.status === "approved") {
+		queueApprovalEmail(c, community);
+	}
 	return c.json({ community });
 });
 
 app.post("/api/admin/communities/:id/approve", async (c) => {
 	if (!(await requireAdmin(c))) return c.json({ error: "Não autorizado." }, 401);
-	const community = await setStatus(
-		c.env.DB,
-		Number(c.req.param("id")),
-		"approved",
-	);
+	const existing = await getCommunity(c.env.DB, c.req.param("id"), true);
+	if (!existing) return c.json({ error: "Comunidade não encontrada." }, 404);
+	const community = await setStatus(c.env.DB, existing.id, "approved");
 	if (!community) return c.json({ error: "Comunidade não encontrada." }, 404);
+	if (existing.status !== "approved") queueApprovalEmail(c, community);
 	return c.json({ community });
 });
 

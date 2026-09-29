@@ -4,6 +4,7 @@ import { SITE_EMAIL, submitSeo } from "../../shared/seo";
 import type { CommunityInput } from "../../shared/types";
 import { fetchConfig, submitCommunity } from "../api";
 import { CommunityForm } from "../components/CommunityForm";
+import { Footer } from "../components/Footer";
 import { Header } from "../components/Header";
 import { usePageSeo } from "../usePageSeo";
 
@@ -64,6 +65,7 @@ export function SubmitPage() {
 					/>
 				)}
 			</main>
+			<Footer />
 		</div>
 	);
 }

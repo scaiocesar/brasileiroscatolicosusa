@@ -5,6 +5,7 @@ import { communitySeo, homeSeo } from "../../shared/seo";
 import type { Community, CommunitySummary } from "../../shared/types";
 import { fetchCommunities, fetchCommunity } from "../api";
 import { CommunityPanel } from "../components/CommunityPanel";
+import { Footer } from "../components/Footer";
 import { Header } from "../components/Header";
 import { MapView } from "../components/MapView";
 import { sortByDistance, type LatLng } from "../geo";
@@ -324,6 +325,7 @@ export function HomePage() {
 					) : null}
 				</div>
 			</div>
+			<Footer />
 		</div>
 	);
 }

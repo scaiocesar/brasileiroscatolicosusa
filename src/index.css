@@ -151,6 +151,35 @@ textarea {
   color: var(--navy);
 }
 
+.site-footer {
+  flex-shrink: 0;
+  background: var(--navy-deep);
+  color: var(--gold-soft);
+  text-align: center;
+  padding: 0.5rem 1.2rem calc(0.5rem + env(safe-area-inset-bottom));
+}
+
+.site-footer p {
+  margin: 0;
+  color: var(--gold-soft);
+  font-size: 0.86rem;
+}
+
+.site-footer a {
+  color: white;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.site-footer a:hover {
+  text-decoration: underline;
+}
+
+.page-shell .site-footer {
+  background: var(--navy);
+  margin-top: auto;
+}
+
 .header-menu-toggle {
   display: none;
   background: transparent;
@@ -163,6 +192,8 @@ textarea {
 
 .map-shell {
   background: var(--navy-deep);
+  height: 100svh;
+  overflow: hidden;
 }
 
 .map-layout {
@@ -170,7 +201,7 @@ textarea {
   flex: 1;
   display: grid;
   grid-template-columns: 1fr;
-  min-height: calc(100svh - 64px);
+  min-height: 0;
 }
 
 .map-layout.sidebar-collapsed {
@@ -332,14 +363,15 @@ textarea {
 
 .map-stage {
   position: relative;
-  min-height: calc(100svh - 64px);
+  min-height: 0;
+  height: 100%;
 }
 
 .map-canvas,
 .map-stage .leaflet-container {
   width: 100%;
   height: 100%;
-  min-height: calc(100svh - 64px);
+  min-height: 0;
   background: #dfe6ef;
 }
 
@@ -620,7 +652,7 @@ textarea {
   position: fixed;
   left: 1rem;
   right: 1rem;
-  bottom: calc(1rem + env(safe-area-inset-bottom));
+  bottom: calc(3.4rem + env(safe-area-inset-bottom));
   z-index: 1300;
   max-width: 420px;
   margin: 0 auto;

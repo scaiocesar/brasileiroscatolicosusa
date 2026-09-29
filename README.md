@@ -43,6 +43,12 @@ npx wrangler secret put TURNSTILE_SITE_KEY
 
 Crie um widget no [Cloudflare Turnstile](https://dash.cloudflare.com/?to=/:account/turnstile) e use o site key / secret reais.
 
+Para o e-mail automático de aprovação, habilite o envio no domínio:
+
+```bash
+npx wrangler email sending enable brasileiroscatolicosusa.org
+```
+
 4. Publique:
 
 ```bash
