@@ -47,8 +47,11 @@ export function setCookieConsent(value: CookieConsent): void {
 function ensureGtagStub(): void {
 	window.dataLayer = window.dataLayer || [];
 	if (window.gtag) return;
-	window.gtag = (...args: unknown[]) => {
-		window.dataLayer.push(args);
+	// Must be a classic function: gtag.js expects an Arguments object in
+	// dataLayer, not a rest-parameter Array (which silently drops hits).
+	window.gtag = function gtag() {
+		// eslint-disable-next-line prefer-rest-params
+		window.dataLayer.push(arguments);
 	};
 }
 
