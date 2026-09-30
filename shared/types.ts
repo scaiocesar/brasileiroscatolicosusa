@@ -54,6 +54,10 @@ export type Community = {
 	submitted_by_name: string | null;
 	submitted_by_email: string | null;
 	admin_notes: string | null;
+	/** Privado: só painel admin — não expor na API pública */
+	coordinator_name: string | null;
+	/** Privado: telefone/WhatsApp do coordenador — só admin */
+	coordinator_phone: string | null;
 	created_at: string;
 	updated_at: string;
 	approved_at: string | null;
@@ -96,6 +100,8 @@ export type CommunityInput = {
 	submitted_by_name?: string | null;
 	submitted_by_email?: string | null;
 	admin_notes?: string | null;
+	coordinator_name?: string | null;
+	coordinator_phone?: string | null;
 	status?: CommunityStatus;
 	mass_schedules: MassSchedule[];
 	services: CommunityService[];

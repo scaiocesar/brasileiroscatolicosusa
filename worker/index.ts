@@ -29,6 +29,7 @@ import {
 } from "./admins";
 import {
 	createCommunity,
+	deleteAllCommunities,
 	deleteCommunities,
 	deleteCommunity,
 	findDuplicateCommunity,
@@ -42,8 +43,15 @@ import {
 	setStatus,
 	setStatusMany,
 	updateCommunity,
+	upsertCommunityFromBackup,
 	validateInput,
 } from "./db";
+import {
+	buildCommunitiesBackup,
+	defaultBackupFileName,
+	parseCommunitiesBackup,
+	serializeCommunitiesBackup,
+} from "../shared/backup";
 import { formatGeocodeQuery, geocodeAddress, lookupZip, normalizeUsZip } from "./geocode";
 import { applyHtmlSeo, withStatus } from "./seo";
 import { queueApprovalEmail, queueApprovalEmails } from "./mail";
@@ -297,7 +305,16 @@ app.post("/api/submissions", async (c) => {
 		);
 	}
 
-	const community = await createCommunity(c.env.DB, input, coords, "pending");
+	const community = await createCommunity(
+		c.env.DB,
+		{
+			...sanitizeProposed(input),
+			submitted_by_name: input.submitted_by_name,
+			submitted_by_email: input.submitted_by_email,
+		},
+		coords,
+		"pending",
+	);
 	return c.json({ ok: true, id: community.id, slug: community.slug }, 201);
 });
 
@@ -562,6 +579,68 @@ app.get("/api/admin/communities", async (c) => {
 	return c.json({ communities });
 });
 
+app.get("/api/admin/backup", async (c) => {
+	if (!(await requireAdmin(c))) return c.json({ error: "Não autorizado." }, 401);
+	const communities = await listAdminCommunities(c.env.DB);
+	const backup = buildCommunitiesBackup(communities);
+	const text = serializeCommunitiesBackup(backup);
+	const fileName = defaultBackupFileName();
+	return c.json({
+		ok: true,
+		fileName,
+		count: backup.communities.length,
+		exported_at: backup.exported_at,
+		text,
+	});
+});
+
+app.post("/api/admin/backup/restore", async (c) => {
+	if (!(await requireAdmin(c))) return c.json({ error: "Não autorizado." }, 401);
+	const body = (await c.req.json().catch(() => null)) as {
+		text?: string;
+		mode?: string;
+	} | null;
+	if (!body?.text?.trim()) {
+		return c.json({ error: "Envie o arquivo de backup em texto." }, 400);
+	}
+	const mode = body.mode === "replace" ? "replace" : "merge";
+	const parsed = parseCommunitiesBackup(body.text);
+	if (!parsed.ok) {
+		return c.json({ error: parsed.error }, 400);
+	}
+
+	let cleared = 0;
+	if (mode === "replace") {
+		cleared = await deleteAllCommunities(c.env.DB);
+	}
+
+	let created = 0;
+	let updated = 0;
+	const errors: string[] = [];
+
+	for (const item of parsed.backup.communities) {
+		try {
+			const result = await upsertCommunityFromBackup(c.env.DB, item);
+			if (result === "created") created += 1;
+			else updated += 1;
+		} catch (err) {
+			errors.push(
+				`${item.name}: ${err instanceof Error ? err.message : "falha ao restaurar"}`,
+			);
+		}
+	}
+
+	return c.json({
+		ok: true,
+		mode,
+		cleared,
+		created,
+		updated,
+		total: parsed.backup.communities.length,
+		errors,
+	});
+});
+
 app.get("/api/admin/communities/:id", async (c) => {
 	if (!(await requireAdmin(c))) return c.json({ error: "Não autorizado." }, 401);
 	const community = await getCommunity(c.env.DB, c.req.param("id"), true);
@@ -774,6 +853,8 @@ app.post("/api/admin/corrections/:id/approve", async (c) => {
 		submitted_by_name: existing.submitted_by_name,
 		submitted_by_email: existing.submitted_by_email,
 		admin_notes: existing.admin_notes,
+		coordinator_name: existing.coordinator_name,
+		coordinator_phone: existing.coordinator_phone,
 	}, coords);
 	if (!community) return c.json({ error: "Comunidade não encontrada." }, 404);
 

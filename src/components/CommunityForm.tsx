@@ -12,8 +12,27 @@ import type {
 	MassLanguage,
 } from "../../shared/types";
 import { geocodeAddress, lookupZip } from "../api";
+import { whatsappUrl } from "../links";
 import { PinPickerMap } from "./PinPickerMap";
 import { TurnstileWidget } from "./TurnstileWidget";
+import { WhatsAppIcon } from "./WhatsAppIcon";
+
+const DEFAULT_COORDINATOR_PHONE = "+1";
+
+/** Campo vazio começa com +1 (editável). Só "+1" conta como vazio ao salvar. */
+function coordinatorPhoneForForm(value: string | null | undefined): string {
+	const trimmed = (value ?? "").trim();
+	return trimmed || DEFAULT_COORDINATOR_PHONE;
+}
+
+function coordinatorPhoneForSave(value: string | null | undefined): string {
+	const trimmed = (value ?? "").trim();
+	const digits = trimmed.replace(/\D/g, "");
+	if (!trimmed || trimmed === DEFAULT_COORDINATOR_PHONE || digits === "1") {
+		return "";
+	}
+	return trimmed;
+}
 
 function communityToInput(community?: Community): CommunityInput {
 	if (!community) {
@@ -36,6 +55,8 @@ function communityToInput(community?: Community): CommunityInput {
 			submitted_by_name: "",
 			submitted_by_email: "",
 			admin_notes: "",
+			coordinator_name: "",
+			coordinator_phone: DEFAULT_COORDINATOR_PHONE,
 			status: "pending",
 			mass_schedules: [
 				{ day_of_week: 0, time: "11:00", language: "pt", notes: "" },
@@ -63,6 +84,8 @@ function communityToInput(community?: Community): CommunityInput {
 		submitted_by_name: community.submitted_by_name ?? "",
 		submitted_by_email: community.submitted_by_email ?? "",
 		admin_notes: community.admin_notes ?? "",
+		coordinator_name: community.coordinator_name ?? "",
+		coordinator_phone: coordinatorPhoneForForm(community.coordinator_phone),
 		status: community.status,
 		mass_schedules: community.mass_schedules,
 		services:
@@ -95,6 +118,8 @@ export function CommunityForm({
 				submitted_by_name: "",
 				submitted_by_email: "",
 				admin_notes: "",
+				coordinator_name: "",
+				coordinator_phone: DEFAULT_COORDINATOR_PHONE,
 				correction_note: "",
 			};
 		}
@@ -240,6 +265,7 @@ export function CommunityForm({
 		event.preventDefault();
 		await onSubmit({
 			...form,
+			coordinator_phone: coordinatorPhoneForSave(form.coordinator_phone),
 			turnstile_token: token,
 		});
 	}
@@ -638,6 +664,59 @@ export function CommunityForm({
 							onChange={(event) => update("admin_notes", event.target.value)}
 						/>
 					</label>
+					<div className="admin-private-block">
+						<p className="admin-private-label">
+							Coordenador (privado — não aparece no site público)
+						</p>
+						<div className="grid-2">
+							<label>
+								Nome do coordenador
+								<input
+									value={form.coordinator_name ?? ""}
+									onChange={(event) =>
+										update("coordinator_name", event.target.value)
+									}
+									placeholder="Ex.: Padre João / Maria Silva"
+									autoComplete="off"
+								/>
+							</label>
+							<label>
+								WhatsApp / telefone
+								<span className="admin-phone-field">
+									<input
+										value={form.coordinator_phone ?? ""}
+										onChange={(event) =>
+											update("coordinator_phone", event.target.value)
+										}
+										onFocus={() => {
+											if (!(form.coordinator_phone ?? "").trim()) {
+												update("coordinator_phone", DEFAULT_COORDINATOR_PHONE);
+											}
+										}}
+										placeholder="+1"
+										inputMode="tel"
+										autoComplete="off"
+									/>
+									{whatsappUrl(coordinatorPhoneForSave(form.coordinator_phone)) ? (
+										<a
+											className="admin-whatsapp-btn"
+											href={
+												whatsappUrl(
+													coordinatorPhoneForSave(form.coordinator_phone),
+												) ?? undefined
+											}
+											target="_blank"
+											rel="noreferrer"
+											title="Abrir WhatsApp"
+											aria-label="Enviar mensagem no WhatsApp"
+										>
+											<WhatsAppIcon />
+										</a>
+									) : null}
+								</span>
+							</label>
+						</div>
+					</div>
 				</>
 			)}
 

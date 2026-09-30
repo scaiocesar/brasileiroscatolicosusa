@@ -301,6 +301,72 @@ export async function adminBatchCommunities(
 	};
 }
 
+export async function adminDownloadBackup(): Promise<{
+	fileName: string;
+	count: number;
+	exported_at: string;
+	text: string;
+}> {
+	const response = await fetch("/api/admin/backup", {
+		credentials: "include",
+	});
+	const data = (await response.json().catch(() => null)) as {
+		error?: string;
+		fileName?: string;
+		count?: number;
+		exported_at?: string;
+		text?: string;
+	} | null;
+	if (!response.ok || !data?.text) {
+		throw new Error(data?.error || "Não foi possível gerar o backup.");
+	}
+	return {
+		fileName: data.fileName || "backup-comunidades.txt",
+		count: data.count ?? 0,
+		exported_at: data.exported_at || new Date().toISOString(),
+		text: data.text,
+	};
+}
+
+export async function adminRestoreBackup(
+	text: string,
+	mode: "merge" | "replace",
+): Promise<{
+	mode: "merge" | "replace";
+	cleared: number;
+	created: number;
+	updated: number;
+	total: number;
+	errors: string[];
+}> {
+	const response = await fetch("/api/admin/backup/restore", {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		credentials: "include",
+		body: JSON.stringify({ text, mode }),
+	});
+	const data = (await response.json().catch(() => null)) as {
+		error?: string;
+		mode?: "merge" | "replace";
+		cleared?: number;
+		created?: number;
+		updated?: number;
+		total?: number;
+		errors?: string[];
+	} | null;
+	if (!response.ok) {
+		throw new Error(data?.error || "Não foi possível restaurar o backup.");
+	}
+	return {
+		mode: data?.mode === "replace" ? "replace" : "merge",
+		cleared: data?.cleared ?? 0,
+		created: data?.created ?? 0,
+		updated: data?.updated ?? 0,
+		total: data?.total ?? 0,
+		errors: data?.errors ?? [],
+	};
+}
+
 export async function adminListCorrections(
 	status?: CommunityStatus,
 ): Promise<CommunityCorrection[]> {

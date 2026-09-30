@@ -6,6 +6,7 @@ export function AdminNav() {
 			<NavLink to="/admin" end>
 				Comunidades
 			</NavLink>
+			<NavLink to="/admin/backup">Backup</NavLink>
 			<NavLink to="/admin/usuarios">Usuários admin</NavLink>
 		</nav>
 	);

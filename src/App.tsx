@@ -8,6 +8,7 @@ import {
 } from "react-router-dom";
 import { initGoogleAnalytics, trackPageView } from "./analytics";
 import { CookieConsentBanner } from "./components/CookieConsent";
+import { AdminBackupPage } from "./pages/AdminBackupPage";
 import { AdminPage } from "./pages/AdminPage";
 import { AdminUsersPage } from "./pages/AdminUsersPage";
 import { CorrectPage } from "./pages/CorrectPage";
@@ -80,6 +81,7 @@ export default function App() {
 				<Route path="/comunidade/:slug/corrigir" element={<CorrectPage />} />
 				<Route path="/informe" element={<SubmitPage />} />
 				<Route path="/admin" element={<AdminPage />} />
+				<Route path="/admin/backup" element={<AdminBackupPage />} />
 				<Route path="/admin/usuarios" element={<AdminUsersPage />} />
 			</Routes>
 			<Analytics />

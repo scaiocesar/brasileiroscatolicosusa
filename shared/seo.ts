@@ -81,6 +81,16 @@ export function adminUsersSeo(): SeoDocument {
 	};
 }
 
+export function adminBackupSeo(): SeoDocument {
+	return {
+		title: "Backup | Brasileiros Católicos nos EUA",
+		description: DEFAULT_DESCRIPTION,
+		canonical: canonicalUrl("/admin/backup"),
+		robots: "noindex, nofollow",
+		jsonLd: graph([websiteNode(), organizationNode()]),
+	};
+}
+
 export function correctionSeo(community: Community): SeoDocument {
 	const path = `/comunidade/${community.slug}/corrigir`;
 	return {
@@ -128,6 +138,7 @@ export function seoForPath(
 	const path = pathname.replace(/\/+$/, "") || "/";
 	if (path === "/informe") return submitSeo();
 	if (path === "/admin/usuarios") return adminUsersSeo();
+	if (path === "/admin/backup") return adminBackupSeo();
 	if (path === "/admin" || path.startsWith("/admin/")) return adminSeo();
 	const correctionPath = path.match(/^\/comunidade\/([^/]+)\/corrigir$/);
 	if (correctionPath) {

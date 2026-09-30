@@ -10,8 +10,10 @@ export function externalUrl(value: string | null | undefined): string | null {
 
 export function whatsappUrl(value: string | null | undefined): string | null {
 	if (!value) return null;
-	const digits = value.replace(/\D/g, "");
-	if (!digits) return null;
+	let digits = value.replace(/\D/g, "");
+	if (!digits || digits === "1") return null;
+	// Número local dos EUA (10 dígitos) → assume código +1
+	if (digits.length === 10) digits = `1${digits}`;
 	return `https://wa.me/${digits}`;
 }
 

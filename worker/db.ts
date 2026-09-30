@@ -4,6 +4,10 @@ import {
 	US_STATES,
 	WEEKDAYS,
 } from "../shared/constants";
+import {
+	backupCommunityToInput,
+	type BackupCommunity,
+} from "../shared/backup";
 import type {
 	Community,
 	CommunityInput,
@@ -36,6 +40,8 @@ type CommunityRow = {
 	submitted_by_name: string | null;
 	submitted_by_email: string | null;
 	admin_notes: string | null;
+	coordinator_name: string | null;
+	coordinator_phone: string | null;
 	created_at: string;
 	updated_at: string;
 	approved_at: string | null;
@@ -104,6 +110,16 @@ export async function ensureCommunitySchema(db: D1Database): Promise<void> {
 	if (!names.has("whatsapp_group_url")) {
 		await db
 			.prepare("ALTER TABLE communities ADD COLUMN whatsapp_group_url TEXT")
+			.run();
+	}
+	if (!names.has("coordinator_name")) {
+		await db
+			.prepare("ALTER TABLE communities ADD COLUMN coordinator_name TEXT")
+			.run();
+	}
+	if (!names.has("coordinator_phone")) {
+		await db
+			.prepare("ALTER TABLE communities ADD COLUMN coordinator_phone TEXT")
 			.run();
 	}
 	communitySchemaReady = true;
@@ -332,6 +348,7 @@ export async function listAdminCommunities(
 	db: D1Database,
 	status?: CommunityStatus,
 ): Promise<Community[]> {
+	await ensureCommunitySchema(db);
 	const query = status
 		? db
 				.prepare(
@@ -413,8 +430,8 @@ export async function createCommunity(
 			`INSERT INTO communities (
         slug, name, description, address_line, city, state, zip, lat, lng,
         website_url, whatsapp, whatsapp_group_url, instagram, facebook, email, phone, status,
-        submitted_by_name, submitted_by_email, admin_notes, approved_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        submitted_by_name, submitted_by_email, admin_notes, coordinator_name, coordinator_phone, approved_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		)
 		.bind(
 			slug,
@@ -437,6 +454,8 @@ export async function createCommunity(
 			emptyToNull(input.submitted_by_name),
 			emptyToNull(input.submitted_by_email),
 			emptyToNull(input.admin_notes),
+			emptyToNull(input.coordinator_name),
+			emptyToNull(input.coordinator_phone),
 			approvedAt,
 		)
 		.run();
@@ -475,7 +494,7 @@ export async function updateCommunity(
         slug = ?, name = ?, description = ?, address_line = ?, city = ?, state = ?, zip = ?,
         lat = ?, lng = ?, website_url = ?, whatsapp = ?, whatsapp_group_url = ?, instagram = ?, facebook = ?,
         email = ?, phone = ?, status = ?, submitted_by_name = ?, submitted_by_email = ?,
-        admin_notes = ?, approved_at = ?, updated_at = datetime('now')
+        admin_notes = ?, coordinator_name = ?, coordinator_phone = ?, approved_at = ?, updated_at = datetime('now')
        WHERE id = ?`,
 		)
 		.bind(
@@ -499,6 +518,8 @@ export async function updateCommunity(
 			emptyToNull(input.submitted_by_name) ?? existing.submitted_by_name,
 			emptyToNull(input.submitted_by_email) ?? existing.submitted_by_email,
 			emptyToNull(input.admin_notes),
+			emptyToNull(input.coordinator_name),
+			emptyToNull(input.coordinator_phone),
 			approvedAt,
 			id,
 		)
@@ -593,6 +614,118 @@ export async function deleteCommunities(
 		db.prepare(`DELETE FROM communities WHERE id IN (${placeholders})`).bind(...list),
 	]);
 	return list.length;
+}
+
+export async function deleteAllCommunities(db: D1Database): Promise<number> {
+	const countRow = await db
+		.prepare("SELECT COUNT(*) AS total FROM communities")
+		.first<{ total: number }>();
+	const total = countRow?.total ?? 0;
+	await db.batch([
+		db.prepare("DELETE FROM mass_schedules"),
+		db.prepare("DELETE FROM community_services"),
+		db.prepare("DELETE FROM community_corrections"),
+		db.prepare("DELETE FROM communities"),
+	]);
+	return total;
+}
+
+/** Restaura/atualiza uma comunidade do backup pelo slug (preserva campos privados). */
+export async function upsertCommunityFromBackup(
+	db: D1Database,
+	item: BackupCommunity,
+): Promise<"created" | "updated"> {
+	await ensureCommunitySchema(db);
+	const existing = await db
+		.prepare("SELECT id FROM communities WHERE slug = ?")
+		.bind(item.slug)
+		.first<{ id: number }>();
+	const input = backupCommunityToInput(item);
+	const approvedAt =
+		item.status === "approved"
+			? (item.approved_at ?? new Date().toISOString())
+			: null;
+
+	if (existing) {
+		await db
+			.prepare(
+				`UPDATE communities SET
+          name = ?, description = ?, address_line = ?, city = ?, state = ?, zip = ?,
+          lat = ?, lng = ?, website_url = ?, whatsapp = ?, whatsapp_group_url = ?,
+          instagram = ?, facebook = ?, email = ?, phone = ?, status = ?,
+          submitted_by_name = ?, submitted_by_email = ?, admin_notes = ?,
+          coordinator_name = ?, coordinator_phone = ?, approved_at = ?,
+          updated_at = datetime('now')
+         WHERE id = ?`,
+			)
+			.bind(
+				item.name.trim(),
+				emptyToNull(item.description),
+				item.address_line.trim(),
+				item.city.trim(),
+				item.state,
+				emptyToNull(item.zip),
+				item.lat,
+				item.lng,
+				emptyToNull(item.website_url),
+				emptyToNull(item.whatsapp),
+				normalizeWhatsappGroupUrl(item.whatsapp_group_url),
+				emptyToNull(item.instagram),
+				emptyToNull(item.facebook),
+				emptyToNull(item.email),
+				emptyToNull(item.phone),
+				item.status,
+				emptyToNull(item.submitted_by_name),
+				emptyToNull(item.submitted_by_email),
+				emptyToNull(item.admin_notes),
+				emptyToNull(item.coordinator_name),
+				emptyToNull(item.coordinator_phone),
+				approvedAt,
+				existing.id,
+			)
+			.run();
+		await replaceRelated(db, existing.id, input);
+		return "updated";
+	}
+
+	const result = await db
+		.prepare(
+			`INSERT INTO communities (
+        slug, name, description, address_line, city, state, zip, lat, lng,
+        website_url, whatsapp, whatsapp_group_url, instagram, facebook, email, phone, status,
+        submitted_by_name, submitted_by_email, admin_notes, coordinator_name, coordinator_phone, approved_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		)
+		.bind(
+			item.slug,
+			item.name.trim(),
+			emptyToNull(item.description),
+			item.address_line.trim(),
+			item.city.trim(),
+			item.state,
+			emptyToNull(item.zip),
+			item.lat,
+			item.lng,
+			emptyToNull(item.website_url),
+			emptyToNull(item.whatsapp),
+			normalizeWhatsappGroupUrl(item.whatsapp_group_url),
+			emptyToNull(item.instagram),
+			emptyToNull(item.facebook),
+			emptyToNull(item.email),
+			emptyToNull(item.phone),
+			item.status,
+			emptyToNull(item.submitted_by_name),
+			emptyToNull(item.submitted_by_email),
+			emptyToNull(item.admin_notes),
+			emptyToNull(item.coordinator_name),
+			emptyToNull(item.coordinator_phone),
+			approvedAt,
+		)
+		.run();
+
+	const id = Number(result.meta.last_row_id);
+	await replaceRelated(db, id, input);
+	return "created";
 }
 
 export async function resolveCoordinates(

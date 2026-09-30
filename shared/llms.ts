@@ -18,7 +18,11 @@ import type { Community, CommunitySummary } from "./types";
 
 export type PublicCommunity = Omit<
 	Community,
-	"submitted_by_name" | "submitted_by_email" | "admin_notes"
+	| "submitted_by_name"
+	| "submitted_by_email"
+	| "admin_notes"
+	| "coordinator_name"
+	| "coordinator_phone"
 >;
 
 export function toPublicCommunity(community: Community): PublicCommunity {
